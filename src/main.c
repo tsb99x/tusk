@@ -1,8 +1,14 @@
 #include <stdio.h>
+#include <stdlib.h>
+
+#include "socket.h"
 
 int main(
         void
 ) {
-        puts("Printing 'Hello, World!' from Tusk");
-        return 0;
+        puts("Starting Tusk Server");
+        SOCKET listener = init_listener();
+        puts("Server launch success");
+        close_listener(listener);
+        return EXIT_SUCCESS;
 }
