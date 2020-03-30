@@ -7,10 +7,11 @@ WORKDIR /usr/src/tusk
 COPY . .
 RUN mkdir build \
     && cd build \
-    && cmake .. \
-    && cmake --build .
+    && cmake -DCMAKE_EXE_LINKER_FLAGS="-static -Os" .. \
+    && cmake --build . \
+    && ldd main
 
-FROM alpine
+FROM scratch
 
 WORKDIR /usr/local/tusk
 COPY --from=builder /usr/src/tusk/build/main .
