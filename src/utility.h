@@ -4,13 +4,16 @@
 #include <stdio.h>
 
 #define EPRINTF(...) \
-        fprintf(stderr, __VA_ARGS__)
+        fprintf(stderr, "[ ERROR ] " __VA_ARGS__)
+
+#define WPRINTF(...) \
+        printf("[ WARN  ] " __VA_ARGS__)
 
 #ifndef NDEBUG
-#define DPRINTF(...)                      \
-        do {                              \
-                printf("* " __VA_ARGS__); \
-                fflush(stdout);           \
+#define DPRINTF(...)                              \
+        do {                                      \
+                printf("[ DEBUG ] " __VA_ARGS__); \
+                fflush(stdout);                   \
         } while(0)
 #else
 #define DPRINTF(...)

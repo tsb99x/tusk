@@ -18,7 +18,8 @@ typedef int SOCKET;
 #endif
 
 #define SERVER_BACKLOG 32
-#define RECV_BUF_LEN 8192
+#define RECV_BUF_SIZE 8192
+#define SEND_BUF_SIZE 8192
 
 SOCKET init_listener(
         void
@@ -29,7 +30,8 @@ void close_listener(
 );
 
 void accept_connections(
-        SOCKET listener
+        SOCKET listener,
+        int (*handler)(const char *const, const int, char *, const int)
 );
 
 #endif

@@ -3,6 +3,7 @@
 #include <signal.h>
 
 #include "socket.h"
+#include "scgi.h"
 
 SOCKET listener;
 
@@ -20,6 +21,6 @@ int main(
         listener = init_listener();
         puts("Server launch success");
         signal(SIGINT, shutdown_handler);
-        accept_connections(listener);
+        accept_connections(listener, process_scgi_message);
         return EXIT_SUCCESS;
 }
