@@ -7,8 +7,11 @@
         fprintf(stderr, __VA_ARGS__)
 
 #ifndef NDEBUG
-#define DPRINTF(...) \
-        printf(__VA_ARGS__)
+#define DPRINTF(...)                      \
+        do {                              \
+                printf("* " __VA_ARGS__); \
+                fflush(stdout);           \
+        } while(0)
 #else
 #define DPRINTF(...)
 #endif

@@ -20,7 +20,7 @@ void init_winsock(
                 EREPORT("Failed to init WinSock");
                 exit(EXIT_FAILURE);
         }
-        DPRINTF("* WinSock initialized\n");
+        DPRINTF("WinSock initialized\n");
         #endif
 }
 
@@ -29,7 +29,7 @@ void cleanup_winsock(
 ) {
         #ifdef WIN32
         WSACleanup();
-        DPRINTF("* WinSock cleanup\n");
+        DPRINTF("WinSock cleanup\n");
         #endif
 }
 
@@ -42,7 +42,7 @@ SOCKET create_socket(
                 cleanup_winsock();
                 exit(EXIT_FAILURE);
         }
-        DPRINTF("* Socket created\n");
+        DPRINTF("Socket created\n");
         return new_socket;
 }
 
@@ -54,7 +54,7 @@ void close_socket(
         #else
         close(socket);
         #endif
-        DPRINTF("* Uninitialized socket\n");
+        DPRINTF("Socket closed\n");
 }
 
 struct sockaddr_in build_server_data(
@@ -78,7 +78,18 @@ void bind_socket(
                 close_listener(socket);
                 exit(EXIT_FAILURE);
         }
-        DPRINTF("* Socket bound\n");
+        DPRINTF("Socket bound\n");
+}
+
+void enable_listener(
+        SOCKET socket
+) {
+        if (listen(socket, SERVER_BACKLOG) != 0) {
+                EREPORT("Failed to listen on socket");
+                close_listener(socket);
+                exit(EXIT_FAILURE);
+        }
+        DPRINTF("Socket listening\n");
 }
 
 SOCKET init_listener(
@@ -86,14 +97,48 @@ SOCKET init_listener(
 ) {
         init_winsock();
         SOCKET socket = create_socket();
-        struct sockaddr_in server = build_server_data();
-        bind_socket(socket, (struct sockaddr *) &server);
+        struct sockaddr_in server_addr = build_server_data();
+        bind_socket(socket, (struct sockaddr *) &server_addr);
+        enable_listener(socket);
         return socket;
 }
 
 void close_listener(
-        SOCKET socket
+        SOCKET listener
 ) {
-        close_socket(socket);
+        close_socket(listener);
         cleanup_winsock();
+}
+
+void receive_data(
+        SOCKET client_socket
+) {
+        char recv_buf[RECV_BUF_LEN];
+        int recv_bytes = recv(client_socket, recv_buf, RECV_BUF_LEN, 0);
+        if (recv_bytes > 0) {
+                DPRINTF("Received request with size of %d byte(s)\n", recv_bytes);
+        } else if (recv_bytes == 0) {
+                DPRINTF("Connection closed by client\n");
+        } else {
+                EREPORT("Failed to receive data");
+        }
+        close_socket(client_socket);
+}
+
+void accept_connections(
+        SOCKET listener
+) {
+        struct sockaddr client_addr;
+        int sockaddr_size = sizeof(struct sockaddr);
+        SOCKET client_socket;
+        DPRINTF("Waiting for connections\n");
+        while ((client_socket = accept(listener, &client_addr, &sockaddr_size)) != INVALID_SOCKET) {
+                DPRINTF("Connection accepted\n");
+                receive_data(client_socket);
+        }
+        if (client_socket == INVALID_SOCKET) {
+                EREPORT("Failed to accept connection");
+                close_listener(listener);
+                exit(EXIT_FAILURE);
+        }
 }

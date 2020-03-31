@@ -17,12 +17,19 @@ typedef int SOCKET;
         perror(msg);
 #endif
 
+#define SERVER_BACKLOG 32
+#define RECV_BUF_LEN 8192
+
 SOCKET init_listener(
         void
 );
 
 void close_listener(
-        SOCKET socket
+        SOCKET listener
+);
+
+void accept_connections(
+        SOCKET listener
 );
 
 #endif
