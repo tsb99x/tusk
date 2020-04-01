@@ -17,16 +17,16 @@
 void test_get_netstring_size(
         void
 ) {
-        char *str;
-        int length;
+        const char *str;
+        size_t length;
 
         str = "11:Hello, Test!,";
-        length = get_netstring_len(&str, str + strlen(str));
+        length = netstrlen(&str, str + strlen(str));
         REQUIRE(length == 11);
         REQUIRE(*str == ':');
 
         str = "Non-netstring string";
-        length = get_netstring_len(&str, str + strlen(str));
+        length = netstrlen(&str, str + strlen(str));
         REQUIRE(length == 0);
         REQUIRE(*str == 'N');
 }

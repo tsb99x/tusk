@@ -7,24 +7,24 @@
 
 #include "scgi.h"
 
-int get_netstring_len(
+size_t netstrlen(
         const char **it,
-        const char *const it_end
+        const char *it_end
 ) {
-        int len = 0;
+        size_t len = 0;
         for (; *it < it_end && isdigit(**it); (*it)++)
                 len = len * 10 + (**it - '0');
-        DPRINTF("Netstring length: %d\n", len);
+        DPRINTF("Netstring length: %zu\n", len);
         return len;
 }
 
-int lookup_headers(
+size_t lookup_headers(
         const char *it,
-        const char *const it_end,
-        struct req_header *const buf,
-        const int buf_size
+        const char *it_end,
+        struct req_header *buf,
+        size_t buf_size
 ) {
-        int pos = 0;
+        size_t pos = 0;
         while (it < it_end) {
                 buf[pos].name = it;
                 it += strlen(it) + 1; // skip '\0'
@@ -40,44 +40,44 @@ int lookup_headers(
                         break;
                 }
         }
-        DPRINTF("Total headers count: %d\n", pos);
+        DPRINTF("Total headers count: %zu\n", pos);
         return pos;
 }
 
 const char *find_header_value(
-        const struct req_header *const headers,
-        const int headers_count,
-        const char *const key
+        const struct req_header *headers,
+        size_t headers_size,
+        const char *key
 ) {
-        for (int i = 0; i < headers_count; i++)
+        for (size_t i = 0; i < headers_size; i++)
                 if (strcmp(key, headers[i].name) == 0)
                         return headers[i].value;
         return NULL;
 }
 
-int process_scgi_message(
+size_t process_scgi_message(
         const char *req_buf,
-        const int req_len,
+        size_t req_size,
         char *res_buf,
-        const int res_buf_size
+        size_t res_buf_size
 ) {
-        const char *req_buf_end = req_buf + req_len;
-        int netstring_len = get_netstring_len(&req_buf, req_buf_end);
-        if (netstring_len == 0) {
-                WPRINTF("No content provided in netstring\n");
+        const char *req_buf_end = req_buf + req_size;
+        size_t headers_len = netstrlen(&req_buf, req_buf_end);
+        if (headers_len == 0) {
+                WPRINTF("No content provided in headers netstring\n");
                 return 0;
         }
 
         req_buf++; // skip ':'
 
-        const char *netstring_end = req_buf + netstring_len;
+        const char *netstring_end = req_buf + headers_len;
         struct req_header headers_buf[REQ_HEADERS_BUF_SIZE];
-        int headers_count = lookup_headers(req_buf, netstring_end, headers_buf, REQ_HEADERS_BUF_SIZE);
-        const char *request_method = find_header_value(headers_buf, headers_count, "REQUEST_METHOD");
-        const char *request_uri = find_header_value(headers_buf, headers_count, "DOCUMENT_URI");
-        const char *query_string = find_header_value(headers_buf, headers_count, "QUERY_STRING");
+        size_t headers_count = lookup_headers(req_buf, netstring_end, headers_buf, REQ_HEADERS_BUF_SIZE);
+        // const char *request_method = find_header_value(headers_buf, headers_count, "REQUEST_METHOD");
+        // const char *request_uri = find_header_value(headers_buf, headers_count, "DOCUMENT_URI");
+        // const char *query_string = find_header_value(headers_buf, headers_count, "QUERY_STRING");
         const char *content_length = find_header_value(headers_buf, headers_count, "CONTENT_LENGTH");
-        const char *content_type = find_header_value(headers_buf, headers_count, "CONTENT_TYPE");
+        // const char *content_type = find_header_value(headers_buf, headers_count, "CONTENT_TYPE");
 
         req_buf = ++netstring_end; // skip ','
 
@@ -92,6 +92,6 @@ int process_scgi_message(
                 "Content-Type: text/plain\r\n"      \
                 "\r\n"                              \
                 "Hello from Tusk";
-        strcpy(res_buf, response);
-        return (int) strlen(response);
+        strncpy(res_buf, response, res_buf_size - 1);
+        return strlen(response);
 }

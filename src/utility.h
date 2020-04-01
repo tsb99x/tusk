@@ -19,9 +19,9 @@
 #define DPRINTF(...)
 #endif
 
-char *get_env_var(
-        char *name,
-        char *def_value
+const char *get_env_var(
+        const char *name,
+        const char *def_value
 );
 
 #endif

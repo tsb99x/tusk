@@ -31,7 +31,7 @@ void close_listener(
 
 void accept_connections(
         SOCKET listener,
-        int (*handler)(const char *const, const int, char *, const int)
+        size_t (*handler)(const char *, size_t, char *, size_t)
 );
 
 #endif

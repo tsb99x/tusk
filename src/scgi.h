@@ -8,29 +8,29 @@ struct req_header {
     const char *value;
 };
 
-int get_netstring_len(
+size_t netstrlen(
         const char **it,
-        const char *const it_end
+        const char *it_end
 );
 
-int lookup_headers(
+size_t lookup_headers(
         const char *it,
-        const char *const it_end,
-        struct req_header *const buf,
-        const int buf_size
+        const char *it_end,
+        struct req_header *buf,
+        size_t buf_size
 );
 
 const char *find_header_value(
-        const struct req_header *const headers,
-        const int headers_count,
-        const char *const key
+        const struct req_header *headers,
+        size_t headers_size,
+        const char *key
 );
 
-int process_scgi_message(
+size_t process_scgi_message(
         const char *req_buf,
-        const int req_len,
+        size_t req_size,
         char *res_buf,
-        const int res_buf_size
+        size_t res_buf_size
 );
 
 #endif

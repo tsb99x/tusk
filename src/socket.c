@@ -71,9 +71,10 @@ struct sockaddr_in build_server_data(
 
 void bind_socket(
         SOCKET socket,
-        struct sockaddr *server
+        const struct sockaddr *server
 ) {
-        if (bind(socket, server, sizeof(struct sockaddr)) == SOCKET_ERROR) {
+        size_t sockaddr_size = sizeof(struct sockaddr);
+        if (bind(socket, server, sockaddr_size) == SOCKET_ERROR) {
                 EREPORT("Failed to bind socket");
                 close_listener(socket);
                 exit(EXIT_FAILURE);
@@ -112,7 +113,7 @@ void close_listener(
 
 void receive_data(
         SOCKET client_socket,
-        int (*handler)(const char *const, const int, char *, const int)
+        size_t (*handler)(const char *, size_t, char *, size_t)
 ) {
         char recv_buf[RECV_BUF_SIZE];
         int recv_bytes = recv(client_socket, recv_buf, RECV_BUF_SIZE, 0);
@@ -134,10 +135,10 @@ void receive_data(
 
 void accept_connections(
         SOCKET listener,
-        int (*handler)(const char *const, const int, char *, const int)
+        size_t (*handler)(const char *, size_t, char *, size_t)
 ) {
         struct sockaddr client_addr;
-        int sockaddr_size = sizeof(struct sockaddr);
+        size_t sockaddr_size = sizeof(struct sockaddr);
         SOCKET client_socket;
         DPRINTF("Waiting for connections\n");
         while ((client_socket = accept(listener, &client_addr, &sockaddr_size)) != INVALID_SOCKET) {
