@@ -4,8 +4,6 @@
 
 #include "scgi.h"
 
-#define BUF_SIZE 2
-
 #define REQUIRE(predicate)                                                      \
         do {                                                                    \
                 if (!(predicate)) {                                             \
@@ -31,17 +29,19 @@ void test_get_netstring_size(
         REQUIRE(*str == 'N');
 }
 
+#define HEADERS_BUF_SIZE 2
+
 void test_lookup_headers(
         void
 ) {
-        struct req_header buf[BUF_SIZE];
+        struct req_header buf[HEADERS_BUF_SIZE];
 
         char *str;
-        int len, headers_count;
+        size_t len, headers_count;
 
         str = "CONTENT_LENGTH" "\0" "0" "\0";
         len = 17;
-        headers_count = lookup_headers(str, str + len, buf, BUF_SIZE);
+        headers_count = lookup_headers(str, str + len, buf, HEADERS_BUF_SIZE);
         REQUIRE(headers_count == 1);
         REQUIRE(!strcmp(buf[0].name, "CONTENT_LENGTH"));
         REQUIRE(!strcmp(buf[0].value, "0"));
@@ -49,7 +49,7 @@ void test_lookup_headers(
         str = "CONTENT_LENGTH" "\0" "0" "\0" \
                 "SCGI" "\0" "1" "\0";
         len = 24;
-        headers_count = lookup_headers(str, str + len, buf, BUF_SIZE);
+        headers_count = lookup_headers(str, str + len, buf, HEADERS_BUF_SIZE);
         REQUIRE(headers_count == 2);
         REQUIRE(!strcmp(buf[0].name, "CONTENT_LENGTH"));
         REQUIRE(!strcmp(buf[0].value, "0"));
@@ -59,7 +59,7 @@ void test_lookup_headers(
         str = "CONTENT_LENGTH" "\0" "0" "\0" \
                 "SCGI" "\0";
         len = 22;
-        headers_count = lookup_headers(str, str + len, buf, BUF_SIZE);
+        headers_count = lookup_headers(str, str + len, buf, HEADERS_BUF_SIZE);
         REQUIRE(headers_count == 1);
         REQUIRE(!strcmp(buf[0].name, "CONTENT_LENGTH"));
         REQUIRE(!strcmp(buf[0].value, "0"));
@@ -68,7 +68,7 @@ void test_lookup_headers(
                 "SCGI" "\0" "1" "\0" \
                 "UNREACHABLE" "\0" "1" "\0";
         len = 38;
-        headers_count = lookup_headers(str, str + len, buf, BUF_SIZE);
+        headers_count = lookup_headers(str, str + len, buf, HEADERS_BUF_SIZE);
         REQUIRE(headers_count == 2);
         REQUIRE(!strcmp(buf[0].name, "CONTENT_LENGTH"));
         REQUIRE(!strcmp(buf[0].value, "0"));
@@ -93,11 +93,32 @@ void test_find_header_value(
         REQUIRE(res == NULL);
 }
 
+#define URL_BUF_SIZE 64
+
+void test_url_decode(
+        void
+) {
+        const char *original = "Hello, Tusk!";
+        const char *encoded = "Hello%2C%20Tusk%21";
+        char buf[URL_BUF_SIZE];
+        size_t len;
+
+        encoded = "Hello%2C%20Tusk%21";
+        len = url_decode(encoded, encoded + strlen(encoded), buf, URL_BUF_SIZE);
+        REQUIRE(len == 12);
+        REQUIRE(!strncmp(original, buf, strlen(original)));
+
+        encoded = "Hello%2C%20Tusk%2";
+        len = url_decode(encoded, encoded + strlen(encoded), buf, URL_BUF_SIZE);
+        REQUIRE(len == 0);
+}
+
 int main(
         void
 ) {
         test_get_netstring_size();
         test_lookup_headers();
         test_find_header_value();
+        test_url_decode();
         return EXIT_SUCCESS;
 }

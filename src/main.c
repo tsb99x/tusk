@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <signal.h>
 
+#include "utility.h"
 #include "socket.h"
 #include "scgi.h"
 
@@ -10,6 +11,7 @@ SOCKET listener;
 void shutdown_handler(
         int signum
 ) {
+        UNUSED(signum);
         puts("Shutdown in progress");
         close_listener(listener);
 }

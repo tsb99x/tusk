@@ -26,6 +26,13 @@ const char *find_header_value(
         const char *key
 );
 
+size_t url_decode(
+        const char *src,
+        const char *src_end,
+        char *dst_buf,
+        size_t dst_buf_size
+);
+
 size_t process_scgi_message(
         const char *req_buf,
         size_t req_size,

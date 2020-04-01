@@ -74,7 +74,7 @@ void bind_socket(
         const struct sockaddr *server
 ) {
         size_t sockaddr_size = sizeof(struct sockaddr);
-        if (bind(socket, server, sockaddr_size) == SOCKET_ERROR) {
+        if (bind(socket, server, (int) sockaddr_size) == SOCKET_ERROR) {
                 EREPORT("Failed to bind socket");
                 close_listener(socket);
                 exit(EXIT_FAILURE);
@@ -120,10 +120,10 @@ void receive_data(
         char send_buf[SEND_BUF_SIZE];
         if (recv_bytes > 0) {
                 DPRINTF("Received request with size of %d byte(s)\n", recv_bytes);
-                int send_bytes = (*handler)(recv_buf, recv_bytes, send_buf, SEND_BUF_SIZE);
+                size_t send_bytes = (*handler)(recv_buf, recv_bytes, send_buf, SEND_BUF_SIZE);
                 if (send_bytes > 0) {
-                        send(client_socket, send_buf, send_bytes, 0);
-                        DPRINTF("Sent response with size of %d byte(s)\n", send_bytes);
+                        send(client_socket, send_buf, (int) send_bytes, 0);
+                        DPRINTF("Sent response with size of %zu byte(s)\n", send_bytes);
                 }
         } else if (recv_bytes == 0) {
                 DPRINTF("Connection closed by client\n");
@@ -141,7 +141,7 @@ void accept_connections(
         size_t sockaddr_size = sizeof(struct sockaddr);
         SOCKET client_socket;
         DPRINTF("Waiting for connections\n");
-        while ((client_socket = accept(listener, &client_addr, &sockaddr_size)) != INVALID_SOCKET) {
+        while ((client_socket = accept(listener, &client_addr, (socklen_t *) &sockaddr_size)) != INVALID_SOCKET) {
                 DPRINTF("Connection accepted\n");
                 receive_data(client_socket, handler);
         }

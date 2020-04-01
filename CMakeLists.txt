@@ -4,7 +4,7 @@ project(tusk C)
 set(CMAKE_C_STANDARD 11)
 
 if(NOT MSVC)
-    add_compile_options(-Wall -Wextra -pedantic)
+    add_compile_options(-Wall -Wextra -pedantic -Werror)
 endif()
 
 add_executable(main src/main.c src/socket.c src/scgi.c src/utility.c)

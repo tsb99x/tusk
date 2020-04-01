@@ -3,10 +3,12 @@
 
 #ifdef WIN32
 #include <winsock2.h>
+typedef int socklen_t;
 #else
+typedef unsigned int socklen_t;
+typedef int SOCKET;
 #define INVALID_SOCKET -1
 #define SOCKET_ERROR -1
-typedef int SOCKET;
 #endif
 
 #ifdef WIN32

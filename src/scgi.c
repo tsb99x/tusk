@@ -55,6 +55,84 @@ const char *find_header_value(
         return NULL;
 }
 
+// const char *const url_encode_lut[] = {
+//         "%21", // !
+//         "%23", // #
+//         "%24", // $
+//         "%25", // %
+//         "%26", // &
+//         "%27", // '
+//         "%28", // (
+//         "%29", // )
+//         "%2A", // *
+//         "%2B", // +
+//         "%2C", // ,
+//         "%2F", // /
+//         "%3A", // :
+//         "%3B", // ;
+//         "%3D", // =
+//         "%3F", // ?
+//         "%40", // @
+//         "%5B", // [
+//         "%5D"  // ]
+// };
+
+// const char *symbols = "!#$%&'()*+,/:;=?@[]";
+
+char digit_to_number(
+        char symbol
+) {
+        return (symbol - '0');
+}
+
+char hex_char_to_number(
+        char symbol
+) {
+        return (symbol - 'A') + 10;
+}
+
+char from_url_encoding(
+        char first,
+        char second
+) {
+        DPRINTF("Decoding from chars '%c', '%c'\n", first, second);
+        char chr = digit_to_number(first) * 16;
+        chr += isdigit(second)
+                ? digit_to_number(second)
+                : hex_char_to_number(second);
+        DPRINTF("Decoded char '%c'\n", chr);
+        return chr;
+}
+
+size_t url_decode(
+        const char *src,
+        const char *src_end,
+        char *dst_buf,
+        size_t dst_buf_size
+) {
+        size_t pos = 0;
+        while (src < src_end) {
+                if (*src == '%') {
+                        if (src + 2 >= src_end) {
+                                DPRINTF("Malformed URL encoded string\n");
+                                return 0;
+                        }
+                        char first = *(++src);
+                        char second = *(++src);
+                        dst_buf[pos] = from_url_encoding(first, second);
+                } else {
+                        dst_buf[pos] = *src;
+                }
+                src++;
+                if (++pos >= dst_buf_size) {
+                        WPRINTF("Destination buffer exhausted\n");
+                        return pos;
+                }
+        }
+        DPRINTF("Decoded string: %.*s\n", (int) pos, dst_buf);
+        return pos;
+}
+
 size_t process_scgi_message(
         const char *req_buf,
         size_t req_size,

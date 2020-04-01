@@ -19,6 +19,9 @@
 #define DPRINTF(...)
 #endif
 
+#define UNUSED(x) \
+        (void) x
+
 const char *get_env_var(
         const char *name,
         const char *def_value
