@@ -113,14 +113,14 @@ void close_listener(
 
 void receive_data(
         SOCKET client_socket,
-        size_t (*handler)(const char *, size_t, char *, size_t)
+        size_t (*handler)(const char *, const char *, char *, size_t)
 ) {
         char recv_buf[RECV_BUF_SIZE];
         int recv_bytes = recv(client_socket, recv_buf, RECV_BUF_SIZE, 0);
         char send_buf[SEND_BUF_SIZE];
         if (recv_bytes > 0) {
                 DPRINTF("Received request with size of %d byte(s)\n", recv_bytes);
-                size_t send_bytes = (*handler)(recv_buf, recv_bytes, send_buf, SEND_BUF_SIZE);
+                size_t send_bytes = (*handler)(recv_buf, recv_buf + recv_bytes, send_buf, SEND_BUF_SIZE);
                 if (send_bytes > 0) {
                         send(client_socket, send_buf, (int) send_bytes, 0);
                         DPRINTF("Sent response with size of %zu byte(s)\n", send_bytes);
@@ -135,7 +135,7 @@ void receive_data(
 
 void accept_connections(
         SOCKET listener,
-        size_t (*handler)(const char *, size_t, char *, size_t)
+        size_t (*handler)(const char *, const char *, char *, size_t)
 ) {
         struct sockaddr client_addr;
         size_t sockaddr_size = sizeof(struct sockaddr);
