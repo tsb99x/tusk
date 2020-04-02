@@ -19,18 +19,18 @@ void test_get_netstring_size(
         void
 ) {
         const char *str;
-        size_t length;
+        size_t len;
 
         NAME_TEST();
 
         str = "11:Hello, Test!,";
-        length = netstrlen(&str, str + strlen(str));
-        REQUIRE(length == 11);
+        str = netstrlen(str, str + strlen(str), &len);
+        REQUIRE(len == 11);
         REQUIRE(*str == ':');
 
         str = "Non-netstring string";
-        length = netstrlen(&str, str + strlen(str));
-        REQUIRE(length == 0);
+        str = netstrlen(str, str + strlen(str), &len);
+        REQUIRE(len == 0);
         REQUIRE(*str == 'N');
 }
 

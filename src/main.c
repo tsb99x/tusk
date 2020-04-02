@@ -23,6 +23,6 @@ int main(
         listener = init_listener();
         puts("Server launch success");
         signal(SIGINT, shutdown_handler);
-        accept_connections(listener, process_scgi_message);
+        accept_connections(listener, process_scgi_message, recv_buf, RECV_BUF_SIZE, send_buf, SEND_BUF_SIZE);
         return EXIT_SUCCESS;
 }

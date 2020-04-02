@@ -15,9 +15,10 @@ char raw_sz_form_data[RAW_SZ_FORM_DATA_BUF_SIZE];
 #define FORM_DATA_BUF_SIZE 64
 struct sz_pair form_data[FORM_DATA_BUF_SIZE];
 
-size_t netstrlen(
-        const char **it,
-        const char *it_end
+const char *netstrlen(
+        const char *it,
+        const char *it_end,
+        size_t *len
 );
 
 size_t lookup_headers(

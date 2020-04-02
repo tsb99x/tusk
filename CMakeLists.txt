@@ -7,10 +7,10 @@ if(NOT MSVC)
     add_compile_options(-Wall -Wextra -pedantic -Werror)
 endif()
 
-add_executable(main src/main.c src/socket.c src/scgi.c src/utility.c)
+add_executable(tusk src/main.c src/socket.c src/scgi.c src/utility.c)
 
 if(WIN32)
-    target_link_libraries(main ws2_32)
+    target_link_libraries(tusk ws2_32)
 endif()
 
 enable_testing()

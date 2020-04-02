@@ -7,15 +7,27 @@
 
 #include "scgi.h"
 
-size_t netstrlen(
-        const char **it,
-        const char *it_end
+char digit_to_number(
+        char symbol
 ) {
-        size_t len = 0;
-        for (; *it < it_end && isdigit(**it); (*it)++)
-                len = len * 10 + (**it - '0');
-        DPRINTF("Netstring length: %zu\n", len);
-        return len;
+        return (symbol - '0');
+}
+
+char hex_char_to_number(
+        char symbol
+) {
+        return (symbol - 'A') + 10;
+}
+
+const char *netstrlen(
+        const char *it,
+        const char *it_end,
+        size_t *len
+) {
+        for (*len = 0; it < it_end && isdigit(*it); it++)
+                *len = *len * 10 + digit_to_number(*it);
+        DPRINTF("Netstring length: %zu\n", *len);
+        return it;
 }
 
 size_t lookup_headers(
@@ -78,18 +90,6 @@ const char *find_header_value(
 // };
 
 // const char *symbols = "!#$%&'()*+,/:;=?@[]";
-
-char digit_to_number(
-        char symbol
-) {
-        return (symbol - '0');
-}
-
-char hex_char_to_number(
-        char symbol
-) {
-        return (symbol - 'A') + 10;
-}
 
 char from_url_encoding(
         char first,
@@ -179,7 +179,8 @@ size_t process_scgi_message(
         char *res_buf,
         size_t res_buf_size
 ) {
-        size_t headers_len = netstrlen(&it, it_end);
+        size_t headers_len;
+        it = netstrlen(it, it_end, &headers_len);
         if (headers_len == 0) {
                 WPRINTF("No content provided in headers netstring\n");
                 return 0;
@@ -198,12 +199,14 @@ size_t process_scgi_message(
         it = ++netstring_end; // skip ','
 
         int content_length_val = atoi(content_length);
+        UNUSED(content_length_val);
         DPRINTF("Request Content-Length is %d\n", content_length_val);
-        if (it >= it_end)
+        if (it >= it_end) {
                 DPRINTF("No content provided\n");
-        else
+        } else {
                 DPRINTF("Content: %.*s\n", content_length_val, it);
-        
+        }
+
         if (!strcmp(content_type, "application/x-www-form-urlencoded")) {
                 x_www_form_urlencoded_decode(
                         it, it_end, 
