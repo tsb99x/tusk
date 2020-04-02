@@ -22,6 +22,9 @@
 #define UNUSED(x) \
         (void) x
 
+#define SIZE_OF_ARRAY(x) \
+        (sizeof(x) / sizeof(x[0]))
+
 const char *get_env_var(
         const char *name,
         const char *def_value

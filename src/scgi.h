@@ -6,6 +6,13 @@ struct sz_pair {
         const char *value;
 };
 
+struct route_binding {
+        const char *path;
+        const char *method;
+        const char *accepts;
+        size_t (*handler)(const char *, const char *, char *, size_t);
+};
+
 #define REQ_HEADERS_BUF_SIZE 64
 struct sz_pair headers[REQ_HEADERS_BUF_SIZE];
 
@@ -50,11 +57,19 @@ size_t x_www_form_urlencoded_decode(
         size_t kv_buf_size
 );
 
+size_t respond(
+        char *res_buf,
+        size_t res_buf_size,
+        const char *response
+);
+
 size_t process_scgi_message(
         const char *it,
         const char *it_end,
         char *res_buf,
-        size_t res_buf_size
+        size_t res_buf_size,
+        struct route_binding *routes,
+        size_t routes_count
 );
 
 #endif

@@ -11,6 +11,8 @@ typedef int SOCKET;
 #define SOCKET_ERROR -1
 #endif
 
+#include "scgi.h"
+
 #ifdef WIN32
 #define EREPORT(msg) \
         EPRINTF(msg ", error: %d\n", WSAGetLastError());
@@ -37,11 +39,13 @@ void close_listener(
 
 void accept_connections(
         SOCKET listener,
-        size_t (*handler)(const char *, const char *, char *, size_t),
+        size_t (*handler)(const char *, const char *, char *, size_t, struct route_binding *, size_t),
         char *recv_buf,
         size_t recv_buf_size,
         char *send_buf,
-        size_t send_buf_size
+        size_t send_buf_size,
+        struct route_binding *routes,
+        size_t routes_count
 );
 
 #endif

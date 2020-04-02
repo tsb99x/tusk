@@ -155,11 +155,17 @@ size_t x_www_form_urlencoded_decode(
 
                 kv_buf[pos].key = sz_buf;
                 sz_buf += url_decode(key_start, key_end, sz_buf, sz_buf_end - sz_buf);
-                sz_buf++; // skip '\0'
+                if (++sz_buf >= sz_buf_end) { // skip '\0'
+                        WPRINTF("String zero buffer exhausted\n");
+                        break;
+                }
 
                 kv_buf[pos].value = sz_buf;
                 sz_buf += url_decode(val_start, val_end, sz_buf, sz_buf_end - sz_buf);
-                sz_buf++; // skip '\0'
+                if (++sz_buf >= sz_buf_end) { // skip '\0'
+                        WPRINTF("String zero buffer exhausted\n");
+                        break;
+                }
 
                 DPRINTF("Found form data kv: %s = %s\n", kv_buf[pos].key, kv_buf[pos].value);
                 if (++pos >= kv_buf_size) {
@@ -173,11 +179,22 @@ size_t x_www_form_urlencoded_decode(
         return pos;
 }
 
+size_t respond(
+        char *res_buf,
+        size_t res_buf_size,
+        const char *response
+) {
+        strncpy(res_buf, response, res_buf_size - 1);
+        return strlen(response);
+}
+
 size_t process_scgi_message(
         const char *it,
         const char *it_end,
         char *res_buf,
-        size_t res_buf_size
+        size_t res_buf_size,
+        struct route_binding *routes,
+        size_t routes_count
 ) {
         size_t headers_len;
         it = netstrlen(it, it_end, &headers_len);
@@ -186,39 +203,51 @@ size_t process_scgi_message(
                 return 0;
         }
 
+        if (*it != ':') {
+                WPRINTF("Request is not SCGI compliant, no ':' found\n");
+                return 0;
+        }
         it++; // skip ':'
 
         const char *netstring_end = it + headers_len;
         size_t headers_count = lookup_headers(it, netstring_end, headers, REQ_HEADERS_BUF_SIZE);
-        // const char *request_method = find_header_value(headers, headers_count, "REQUEST_METHOD");
-        // const char *request_uri = find_header_value(headers, headers_count, "DOCUMENT_URI");
-        // const char *query_string = find_header_value(headers, headers_count, "QUERY_STRING");
-        const char *content_length = find_header_value(headers, headers_count, "CONTENT_LENGTH");
+        const char *request_uri = find_header_value(headers, headers_count, "DOCUMENT_URI");
+        const char *request_method = find_header_value(headers, headers_count, "REQUEST_METHOD");
         const char *content_type = find_header_value(headers, headers_count, "CONTENT_TYPE");
+        // const char *content_length = find_header_value(headers, headers_count, "CONTENT_LENGTH");
+        // const char *query_string = find_header_value(headers, headers_count, "QUERY_STRING");
 
-        it = ++netstring_end; // skip ','
-
-        int content_length_val = atoi(content_length);
-        UNUSED(content_length_val);
-        DPRINTF("Request Content-Length is %d\n", content_length_val);
-        if (it >= it_end) {
-                DPRINTF("No content provided\n");
-        } else {
-                DPRINTF("Content: %.*s\n", content_length_val, it);
+        if (*(it = netstring_end) != ',') {
+                WPRINTF("Request is not SCGI compliant, no ',' found\n");
+                return 0;
         }
+        it++; // skip ','
 
-        if (!strcmp(content_type, "application/x-www-form-urlencoded")) {
-                x_www_form_urlencoded_decode(
-                        it, it_end, 
-                        raw_sz_form_data, raw_sz_form_data + RAW_SZ_FORM_DATA_BUF_SIZE,
-                        form_data, FORM_DATA_BUF_SIZE
-                );
+        for (size_t i = 0; i < routes_count; i++) {
+                if (strcmp(routes[i].path, request_uri) != 0)
+                        continue;
+                if (strcmp(routes[i].method, request_method) != 0) {
+                        DPRINTF("Request method %s is not allowed\n", request_method);
+                        return respond(res_buf, res_buf_size,
+                                "Status: 405 Method Not Allowed\r\n" \
+                                "Content-Type: text/plain\r\n"       \
+                                "\r\n"                               \
+                                "Method Not Allowed");
+                }
+                if (strcmp(routes[i].accepts, content_type) != 0) {
+                        DPRINTF("Media type %s is not allowed\n", content_type);
+                        return respond(res_buf, res_buf_size,
+                                "Status: 415 Unsupported Media Type\r\n" \
+                                "Content-Type: text/plain\r\n"           \
+                                "\r\n"                                   \
+                                "Unsupported Media Type");
+                }
+                return routes[i].handler(it, it_end, res_buf, res_buf_size);
         }
-
-        const char *response = "Status: 200 OK\r\n" \
-                "Content-Type: text/plain\r\n"      \
-                "\r\n"                              \
-                "Hello from Tusk";
-        strncpy(res_buf, response, res_buf_size - 1);
-        return strlen(response);
+        DPRINTF("Route %s not found\n", request_uri);
+        return respond(res_buf, res_buf_size,
+                "Status: 404 Not Found\r\n"    \
+                "Content-Type: text/plain\r\n" \
+                "\r\n"                         \
+                "Not Found");
 }
