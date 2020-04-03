@@ -83,9 +83,10 @@ void bind_socket(
 }
 
 void enable_listener(
-        SOCKET socket
+        SOCKET socket,
+        int backlog_size
 ) {
-        if (listen(socket, SERVER_BACKLOG) != 0) {
+        if (listen(socket, backlog_size) != 0) {
                 EREPORT("Failed to listen on socket");
                 close_listener(socket);
                 exit(EXIT_FAILURE);
@@ -94,13 +95,13 @@ void enable_listener(
 }
 
 SOCKET init_listener(
-        void
+        int backlog_size
 ) {
         init_winsock();
         SOCKET socket = create_socket();
         struct sockaddr_in server_addr = build_server_data();
         bind_socket(socket, (struct sockaddr *) &server_addr);
-        enable_listener(socket);
+        enable_listener(socket, backlog_size);
         return socket;
 }
 
@@ -113,18 +114,20 @@ void close_listener(
 
 void process_data(
         SOCKET client_socket,
-        size_t (*handler)(const char *, const char *, char *, size_t, struct route_binding *, size_t),
+        size_t (*handler)(const char *, const char *, char *, size_t, struct sz_pair *, size_t, struct route_binding *, size_t),
         char *recv_buf,
         size_t recv_buf_size,
         char *send_buf,
         size_t send_buf_size,
+        struct sz_pair *headers_buf,
+        size_t headers_buf_size,
         struct route_binding *routes,
         size_t routes_count
 ) {
         int recv_bytes = recv(client_socket, recv_buf, (int) recv_buf_size, 0);
         if (recv_bytes > 0) {
                 DPRINTF("Received request with size of %d byte(s)\n", recv_bytes);
-                size_t send_bytes = (*handler)(recv_buf, recv_buf + recv_bytes, send_buf, send_buf_size, routes, routes_count);
+                size_t send_bytes = (*handler)(recv_buf, recv_buf + recv_bytes, send_buf, send_buf_size, headers_buf, headers_buf_size, routes, routes_count);
                 if (send_bytes > 0) {
                         send(client_socket, send_buf, (int) send_bytes, 0);
                         DPRINTF("Sent response with size of %zu byte(s)\n", send_bytes);
@@ -139,11 +142,13 @@ void process_data(
 
 void accept_connections(
         SOCKET listener,
-        size_t (*handler)(const char *, const char *, char *, size_t, struct route_binding *, size_t),
+        size_t (*handler)(const char *, const char *, char *, size_t, struct sz_pair *, size_t, struct route_binding *, size_t),
         char *recv_buf,
         size_t recv_buf_size,
         char *send_buf,
         size_t send_buf_size,
+        struct sz_pair *headers_buf,
+        size_t headers_buf_size,
         struct route_binding *routes,
         size_t routes_count
 ) {
@@ -153,7 +158,7 @@ void accept_connections(
         DPRINTF("Waiting for connections\n");
         while ((client_socket = accept(listener, &client_addr, (socklen_t *) &sockaddr_size)) != INVALID_SOCKET) {
                 DPRINTF("Connection accepted\n");
-                process_data(client_socket, handler, recv_buf, recv_buf_size, send_buf, send_buf_size, routes, routes_count);
+                process_data(client_socket, handler, recv_buf, recv_buf_size, send_buf, send_buf_size, headers_buf, headers_buf_size, routes, routes_count);
         }
         if (client_socket == INVALID_SOCKET) {
                 EREPORT("Failed to accept connection");

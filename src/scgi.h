@@ -10,17 +10,8 @@ struct route_binding {
         const char *path;
         const char *method;
         const char *accepts;
-        size_t (*handler)(const char *, const char *, char *, size_t);
+        size_t (*handler)(const struct sz_pair *, size_t, const char *, const char *, char *, size_t);
 };
-
-#define REQ_HEADERS_BUF_SIZE 64
-struct sz_pair headers[REQ_HEADERS_BUF_SIZE];
-
-#define RAW_SZ_FORM_DATA_BUF_SIZE 4096
-char raw_sz_form_data[RAW_SZ_FORM_DATA_BUF_SIZE];
-
-#define FORM_DATA_BUF_SIZE 64
-struct sz_pair form_data[FORM_DATA_BUF_SIZE];
 
 const char *netstrlen(
         const char *it,
@@ -68,6 +59,8 @@ size_t process_scgi_message(
         const char *it_end,
         char *res_buf,
         size_t res_buf_size,
+        struct sz_pair *headers_buf,
+        size_t headers_buf_size,
         struct route_binding *routes,
         size_t routes_count
 );

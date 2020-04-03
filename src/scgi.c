@@ -193,6 +193,8 @@ size_t process_scgi_message(
         const char *it_end,
         char *res_buf,
         size_t res_buf_size,
+        struct sz_pair *headers_buf,
+        size_t headers_buf_size,
         struct route_binding *routes,
         size_t routes_count
 ) {
@@ -210,10 +212,10 @@ size_t process_scgi_message(
         it++; // skip ':'
 
         const char *netstring_end = it + headers_len;
-        size_t headers_count = lookup_headers(it, netstring_end, headers, REQ_HEADERS_BUF_SIZE);
-        const char *request_uri = find_header_value(headers, headers_count, "DOCUMENT_URI");
-        const char *request_method = find_header_value(headers, headers_count, "REQUEST_METHOD");
-        const char *content_type = find_header_value(headers, headers_count, "CONTENT_TYPE");
+        size_t headers_count = lookup_headers(it, netstring_end, headers_buf, headers_buf_size);
+        const char *request_uri = find_header_value(headers_buf, headers_count, "DOCUMENT_URI");
+        const char *request_method = find_header_value(headers_buf, headers_count, "REQUEST_METHOD");
+        const char *content_type = find_header_value(headers_buf, headers_count, "CONTENT_TYPE");
         // const char *content_length = find_header_value(headers, headers_count, "CONTENT_LENGTH");
         // const char *query_string = find_header_value(headers, headers_count, "QUERY_STRING");
 
@@ -242,7 +244,7 @@ size_t process_scgi_message(
                                 "\r\n"                                   \
                                 "Unsupported Media Type");
                 }
-                return routes[i].handler(it, it_end, res_buf, res_buf_size);
+                return routes[i].handler(headers_buf, headers_count, it, it_end, res_buf, res_buf_size);
         }
         DPRINTF("Route %s not found\n", request_uri);
         return respond(res_buf, res_buf_size,

@@ -7,7 +7,13 @@
         fprintf(stderr, "[ ERROR ] " __VA_ARGS__)
 
 #define WPRINTF(...) \
-        printf("[ WARN  ] " __VA_ARGS__)
+        do {                                      \
+                printf("[ WARN  ] " __VA_ARGS__); \
+                fflush(stdout);                   \
+        } while(0)
+
+#define IPRINTF(...) \
+        printf("[ INFO  ] " __VA_ARGS__)
 
 #ifndef NDEBUG
 #define DPRINTF(...)                              \
