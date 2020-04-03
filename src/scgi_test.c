@@ -18,10 +18,10 @@
 void test_get_netstring_size(
         void
 ) {
+        NAME_TEST();
+
         const char *str;
         size_t len;
-
-        NAME_TEST();
 
         str = "11:Hello, Test!,";
         str = netstrlen(str, str + strlen(str), &len);
@@ -39,66 +39,76 @@ void test_get_netstring_size(
 void test_lookup_headers(
         void
 ) {
-        struct sz_pair buf[HEADERS_BUF_SIZE];
-
-        char *str;
-        size_t len, headers_count;
-
         NAME_TEST();
+
+        const char *str, *res;
+        size_t len;
+        struct sz_pair sz_pair_buf[HEADERS_BUF_SIZE];
+        struct headers_buf buf = {
+                .ptr = sz_pair_buf,
+                .size = HEADERS_BUF_SIZE
+        };
 
         str = "CONTENT_LENGTH" "\0" "0" "\0";
         len = 17;
-        headers_count = lookup_headers(str, str + len, buf, HEADERS_BUF_SIZE);
-        REQUIRE(headers_count == 1);
-        REQUIRE(!strcmp(buf[0].key, "CONTENT_LENGTH"));
-        REQUIRE(!strcmp(buf[0].value, "0"));
+        res = lookup_headers(str, str + len, &buf);
+        REQUIRE(res == str + len);
+        REQUIRE(buf.count == 1);
+        REQUIRE(!strcmp(buf.ptr[0].key, "CONTENT_LENGTH"));
+        REQUIRE(!strcmp(buf.ptr[0].value, "0"));
 
         str = "CONTENT_LENGTH" "\0" "0" "\0" \
                 "SCGI" "\0" "1" "\0";
         len = 24;
-        headers_count = lookup_headers(str, str + len, buf, HEADERS_BUF_SIZE);
-        REQUIRE(headers_count == 2);
-        REQUIRE(!strcmp(buf[0].key, "CONTENT_LENGTH"));
-        REQUIRE(!strcmp(buf[0].value, "0"));
-        REQUIRE(!strcmp(buf[1].key, "SCGI"));
-        REQUIRE(!strcmp(buf[1].value, "1"));
+        res = lookup_headers(str, str + len, &buf);
+        REQUIRE(res == str + len);
+        REQUIRE(buf.count == 2);
+        REQUIRE(!strcmp(buf.ptr[0].key, "CONTENT_LENGTH"));
+        REQUIRE(!strcmp(buf.ptr[0].value, "0"));
+        REQUIRE(!strcmp(buf.ptr[1].key, "SCGI"));
+        REQUIRE(!strcmp(buf.ptr[1].value, "1"));
 
         str = "CONTENT_LENGTH" "\0" "0" "\0" \
                 "SCGI" "\0";
         len = 22;
-        headers_count = lookup_headers(str, str + len, buf, HEADERS_BUF_SIZE);
-        REQUIRE(headers_count == 1);
-        REQUIRE(!strcmp(buf[0].key, "CONTENT_LENGTH"));
-        REQUIRE(!strcmp(buf[0].value, "0"));
+        res = lookup_headers(str, str + len, &buf);
+        REQUIRE(res == str + len);
+        REQUIRE(buf.count == 1);
+        REQUIRE(!strcmp(buf.ptr[0].key, "CONTENT_LENGTH"));
+        REQUIRE(!strcmp(buf.ptr[0].value, "0"));
 
         str = "CONTENT_LENGTH" "\0" "0" "\0" \
                 "SCGI" "\0" "1" "\0" \
                 "UNREACHABLE" "\0" "1" "\0";
         len = 38;
-        headers_count = lookup_headers(str, str + len, buf, HEADERS_BUF_SIZE);
-        REQUIRE(headers_count == 2);
-        REQUIRE(!strcmp(buf[0].key, "CONTENT_LENGTH"));
-        REQUIRE(!strcmp(buf[0].value, "0"));
-        REQUIRE(!strcmp(buf[1].key, "SCGI"));
-        REQUIRE(!strcmp(buf[1].value, "1"));
+        res = lookup_headers(str, str + len, &buf);
+        REQUIRE(res == str + 24);
+        REQUIRE(buf.count == 2);
+        REQUIRE(!strcmp(buf.ptr[0].key, "CONTENT_LENGTH"));
+        REQUIRE(!strcmp(buf.ptr[0].value, "0"));
+        REQUIRE(!strcmp(buf.ptr[1].key, "SCGI"));
+        REQUIRE(!strcmp(buf.ptr[1].value, "1"));
 }
 
 void test_find_header_value(
         void
 ) {
-        struct sz_pair headers[] = {
-                {.key = "CONTENT_LENGTH", .value = "0"},
-                {.key = "SCGI", .value = "1"}
-        };
-
         NAME_TEST();
 
         const char *res;
+        struct sz_pair sz_pair_arr[] = {
+                {.key = "CONTENT_LENGTH", .value = "0"},
+                {.key = "SCGI", .value = "1"}
+        };
+        struct headers_buf headers = {
+                .ptr = sz_pair_arr,
+                .count = 2
+        };
 
-        res = find_header_value(headers, 2, "CONTENT_LENGTH");
-        REQUIRE(res == headers[0].value);
+        res = find_header_value(&headers, "CONTENT_LENGTH");
+        REQUIRE(res == headers.ptr[0].value);
 
-        res = find_header_value(headers, 2, "NON-EXISTING");
+        res = find_header_value(&headers, "NON-EXISTING");
         REQUIRE(res == NULL);
 }
 
@@ -107,12 +117,12 @@ void test_find_header_value(
 void test_url_decode(
         void
 ) {
+        NAME_TEST();
+
         const char *original = "Hello, Tusk!";
         const char *encoded = "Hello%2C%20Tusk%21";
         char buf[URL_BUF_SIZE];
         size_t len;
-
-        NAME_TEST();
 
         encoded = "Hello%2C%20Tusk%21";
         len = url_decode(encoded, encoded + strlen(encoded), buf, URL_BUF_SIZE);

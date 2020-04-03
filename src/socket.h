@@ -19,14 +19,15 @@ typedef int SOCKET;
         perror(msg);
 #endif
 
-struct sock_ctx {
-        char *const recv_buf;
-        const size_t recv_buf_size;
-        size_t recv_count;
+struct char_buf {
+        char *const ptr;
+        const size_t size;
+        size_t count;
+};
 
-        char *const send_buf;
-        const size_t send_buf_size;
-        size_t send_count;
+struct sock_ctx {
+        struct char_buf recv;
+        struct char_buf send;
 };
 
 SOCKET init_listener(

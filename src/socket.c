@@ -112,26 +112,25 @@ void close_listener(
         cleanup_winsock();
 }
 
-void process_data(
+int receive_data(
         SOCKET client_socket,
-        void (*scgi_handler)(struct sock_ctx *),
-        struct sock_ctx *ctx
+        struct char_buf *recv_buf
 ) {
-        size_t recv_bytes = recv(client_socket, ctx->recv_buf, (int) ctx->recv_buf_size, 0);
-        if (recv_bytes > 0) {
-                DPRINTF("Received request with size of %zu byte(s)\n", recv_bytes);
-                ctx->recv_count = recv_bytes;
-                (*scgi_handler)(ctx);
-                if (ctx->send_count > 0) {
-                        send(client_socket, ctx->send_buf, (int) ctx->send_count, 0);
-                        DPRINTF("Sent response with size of %zu byte(s)\n", ctx->send_count);
-                }
-        } else if (recv_bytes == 0) {
-                DPRINTF("Connection closed by client\n");
-        } else {
-                EREPORT("Failed to receive data");
-        }
-        close_socket(client_socket);
+        int bytes = recv(client_socket, recv_buf->ptr, (int) recv_buf->size, 0);
+        if (bytes >= 0)
+                recv_buf->count = bytes;
+        DPRINTF("Received request with size of %d byte(s)\n", bytes);
+        return bytes;
+}
+
+void send_data(
+        SOCKET client_socket,
+        struct char_buf *send_buf
+) {
+        if (send_buf->count == 0) 
+                return;
+        send(client_socket, send_buf->ptr, (int) send_buf->count, 0);
+        DPRINTF("Sent response with size of %zu byte(s)\n", send_buf->count);
 }
 
 void accept_connections(
@@ -145,7 +144,16 @@ void accept_connections(
         DPRINTF("Waiting for connections\n");
         while ((client_socket = accept(listener, &client_addr, (socklen_t *) &sockaddr_size)) != INVALID_SOCKET) {
                 DPRINTF("Connection accepted\n");
-                process_data(client_socket, scgi_handler, ctx);
+                int recv_bytes = receive_data(client_socket, &ctx->recv);
+                if (recv_bytes > 0) {
+                        (*scgi_handler)(ctx);
+                        send_data(client_socket, &ctx->send);
+                } else if (recv_bytes == 0) {
+                        DPRINTF("Connection closed by client\n");
+                } else {
+                        EREPORT("Failed to receive data");
+                }
+                close_socket(client_socket);
         }
         EREPORT("Failed to accept connection");
         close_listener(listener);

@@ -44,14 +44,14 @@ void hello_handler(
         //         form_data, FORM_DATA_BUF_SIZE
         // );
 
-        respond_sz(ctx,
+        respond_sz(&ctx->send,
                 "Status: 200 OK\r\n"                \
                 "Content-Type: text/plain\r\n"      \
                 "\r\n"                              \
                 "Hello from Tusk");
 }
 
-struct route_binding routes[] = {
+struct route_binding routes_arr[] = {
         {
                 .path = "/hello",
                 .method = "GET",
@@ -61,17 +61,22 @@ struct route_binding routes[] = {
 };
 
 struct scgi_ctx req_ctx = {
-        .recv_buf = recv_buf,
-        .recv_buf_size = RECV_BUF_SIZE,
-        .recv_count = 0,
-        .send_buf = send_buf,
-        .send_buf_size = SEND_BUF_SIZE,
-        .send_count = 0,
-        .routes = routes,
-        .routes_count = SIZE_OF_ARRAY(routes),
-        .headers_buf = headers_buf,
-        .headers_buf_size = HEADERS_BUF_SIZE,
-        .headers_count = 0
+        .recv = {
+                .ptr = recv_buf,
+                .size = RECV_BUF_SIZE
+        },
+        .send = {
+                .ptr = send_buf,
+                .size = SEND_BUF_SIZE
+        },
+        .headers = {
+                .ptr = headers_buf,
+                .size = HEADERS_BUF_SIZE
+        },
+        .routes = {
+                .ptr = routes_arr,
+                .count = SIZE_OF_ARRAY(routes_arr)
+        }
 };
 
 int main(

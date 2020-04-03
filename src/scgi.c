@@ -30,40 +30,39 @@ const char *netstrlen(
         return it;
 }
 
-size_t lookup_headers(
+const char *lookup_headers(
         const char *it,
         const char *it_end,
-        struct sz_pair *buf,
-        size_t buf_size
+        struct headers_buf *headers
 ) {
         size_t pos = 0;
         while (it < it_end) {
-                buf[pos].key = it;
+                headers->ptr[pos].key = it;
                 it += strlen(it) + 1; // skip '\0'
                 if (it >= it_end) {
                         WPRINTF("Incomplete header found\n");
                         break;
                 }
-                buf[pos].value = it;
+                headers->ptr[pos].value = it;
                 it += strlen(it) + 1; // skip '\0'
-                DPRINTF("Found header: %s = %s\n", buf[pos].key, buf[pos].value);
-                if (++pos >= buf_size) {
+                DPRINTF("Found header: %s = %s\n", headers->ptr[pos].key, headers->ptr[pos].value);
+                if (++pos >= headers->size) {
                         WPRINTF("Headers buffer exhausted\n");
                         break;
                 }
         }
         DPRINTF("Total headers count: %zu\n", pos);
-        return pos;
+        headers->count = pos;
+        return it;
 }
 
 const char *find_header_value(
-        const struct sz_pair *headers,
-        size_t headers_size,
+        const struct headers_buf *headers,
         const char *key
 ) {
-        for (size_t i = 0; i < headers_size; i++)
-                if (strcmp(key, headers[i].key) == 0)
-                        return headers[i].value;
+        for (size_t i = 0; i < headers->count; i++)
+                if (strcmp(key, headers->ptr[i].key) == 0)
+                        return headers->ptr[i].value;
         return NULL;
 }
 
@@ -180,11 +179,11 @@ size_t x_www_form_urlencoded_decode(
 }
 
 void respond_sz(
-        struct scgi_ctx *ctx,
+        struct char_buf *send,
         const char *response
 ) {
-        strncpy(ctx->send_buf, response, ctx->send_buf_size - 1);
-        ctx->send_count = strlen(response);
+        strncpy(send->ptr, response, send->size - 1);
+        send->count = strlen(response);
 }
 
 void process_scgi_message(
@@ -192,63 +191,62 @@ void process_scgi_message(
 ) {
         struct scgi_ctx *ctx = (struct scgi_ctx *) sock_ctx;
         size_t headers_len;
-        const char *it = ctx->recv_buf;
-        const char *it_end = it + ctx->recv_count;
+        const char *it = ctx->recv.ptr;
+        const char *it_end = it + ctx->recv.size;
         it = netstrlen(it, it_end, &headers_len);
         if (headers_len == 0) {
                 WPRINTF("No content provided in headers netstring\n");
-                ctx->send_count = 0;
+                ctx->send.count = 0;
                 return;
         }
 
         if (*it != ':') {
                 WPRINTF("Request is not SCGI compliant, no ':' found\n");
-                ctx->send_count = 0;
+                ctx->send.count = 0;
                 return;
         }
         it++; // skip ':'
 
-        const char *netstring_end = it + headers_len;
-        size_t headers_count = lookup_headers(it, netstring_end, ctx->headers_buf, ctx->headers_buf_size);
-        const char *request_uri = find_header_value(ctx->headers_buf, headers_count, "DOCUMENT_URI");
-        const char *request_method = find_header_value(ctx->headers_buf, headers_count, "REQUEST_METHOD");
-        const char *content_type = find_header_value(ctx->headers_buf, headers_count, "CONTENT_TYPE");
-        // const char *content_length = find_header_value(request->headers_buf, headers_count, "CONTENT_LENGTH");
-        // const char *query_string = find_header_value(request->headers_buf, headers_count, "QUERY_STRING");
+        it = lookup_headers(it, it + headers_len, &ctx->headers);
+        const char *request_uri = find_header_value(&ctx->headers, "DOCUMENT_URI");
+        const char *request_method = find_header_value(&ctx->headers, "REQUEST_METHOD");
+        const char *content_type = find_header_value(&ctx->headers, "CONTENT_TYPE");
+        // const char *content_length = find_header_value(&ctx->headers, "CONTENT_LENGTH");
+        // const char *query_string = find_header_value(&ctx->headers, "QUERY_STRING");
 
-        if (*(it = netstring_end) != ',') {
+        if (*it != ',') {
                 WPRINTF("Request is not SCGI compliant, no ',' found\n");
-                ctx->send_count = 0;
+                ctx->send.count = 0;
                 return;
         }
         it++; // skip ','
 
-        for (size_t i = 0; i < ctx->routes_count; i++) {
-                if (strcmp(ctx->routes[i].path, request_uri) != 0)
+        for (size_t i = 0; i < ctx->routes.count; i++) {
+                if (strcmp(ctx->routes.ptr[i].path, request_uri) != 0)
                         continue;
-                if (strcmp(ctx->routes[i].method, request_method) != 0) {
+                if (strcmp(ctx->routes.ptr[i].method, request_method) != 0) {
                         DPRINTF("Request method %s is not allowed\n", request_method);
-                        respond_sz(ctx,
+                        respond_sz(&ctx->send,
                                 "Status: 405 Method Not Allowed\r\n" \
                                 "Content-Type: text/plain\r\n"       \
                                 "\r\n"                               \
                                 "Method Not Allowed");
                         return;
                 }
-                if (strcmp(ctx->routes[i].accepts, content_type) != 0) {
+                if (strcmp(ctx->routes.ptr[i].accepts, content_type) != 0) {
                         DPRINTF("Media type %s is not allowed\n", content_type);
-                        respond_sz(ctx,
+                        respond_sz(&ctx->send,
                                 "Status: 415 Unsupported Media Type\r\n" \
                                 "Content-Type: text/plain\r\n"           \
                                 "\r\n"                                   \
                                 "Unsupported Media Type");
                         return;
                 }
-                ctx->routes[i].handler(ctx);
+                ctx->routes.ptr[i].handler(ctx);
                 return;
         }
         DPRINTF("Route %s not found\n", request_uri);
-        respond_sz(ctx,
+        respond_sz(&ctx->send,
                 "Status: 404 Not Found\r\n"    \
                 "Content-Type: text/plain\r\n" \
                 "\r\n"                         \
