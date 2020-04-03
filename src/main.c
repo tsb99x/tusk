@@ -33,19 +33,9 @@ void shutdown_handler(
         close_listener(listener);
 }
 
-size_t hello_handler(
-        const struct sz_pair *headers,
-        size_t headers_count,
-        const char *req_body,
-        const char *req_body_end,
-        char *res_buf,
-        size_t res_buf_size
+void hello_handler(
+        struct req_ctx *request
 ) {
-        UNUSED(headers);
-        UNUSED(headers_count);
-        UNUSED(req_body);
-        UNUSED(req_body_end);
-
         IPRINTF("Handling /hello\n");
 
         // x_www_form_urlencoded_decode(
@@ -54,7 +44,7 @@ size_t hello_handler(
         //         form_data, FORM_DATA_BUF_SIZE
         // );
 
-        return respond(res_buf, res_buf_size,
+        respond_sz(request,
                 "Status: 200 OK\r\n"                \
                 "Content-Type: text/plain\r\n"      \
                 "\r\n"                              \
@@ -62,16 +52,33 @@ size_t hello_handler(
 }
 
 struct route_binding routes[] = {
-        {.path = "/hello", .method = "GET", .accepts = "", .handler = hello_handler}
+        {
+                .path = "/hello",
+                .method = "GET",
+                .accepts = "",
+                .handler = hello_handler
+        }
 };
 
 int main(
         void
 ) {
+        struct req_ctx request = {
+                .recv_buf = recv_buf,
+                .recv_buf_size = RECV_BUF_SIZE,
+                .recv_count = 0,
+                .headers_buf = headers_buf,
+                .headers_buf_size = HEADERS_BUF_SIZE,
+                .headers_count = 0,
+                .send_buf = send_buf,
+                .send_buf_size = SEND_BUF_SIZE,
+                .send_count = 0
+        };
+
         IPRINTF("Starting Tusk Server\n");
         listener = init_listener(BACKLOG_SIZE);
         IPRINTF("Server launch success\n");
         signal(SIGINT, shutdown_handler);
-        accept_connections(listener, process_scgi_message, recv_buf, RECV_BUF_SIZE, send_buf, SEND_BUF_SIZE, headers_buf, HEADERS_BUF_SIZE, routes, SIZE_OF_ARRAY(routes));
+        accept_connections(listener, process_scgi_message, routes, SIZE_OF_ARRAY(routes), &request);
         return EXIT_SUCCESS;
 }

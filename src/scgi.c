@@ -179,49 +179,48 @@ size_t x_www_form_urlencoded_decode(
         return pos;
 }
 
-size_t respond(
-        char *res_buf,
-        size_t res_buf_size,
+void respond_sz(
+        struct req_ctx *request,
         const char *response
 ) {
-        strncpy(res_buf, response, res_buf_size - 1);
-        return strlen(response);
+        strncpy(request->send_buf, response, request->send_buf_size - 1);
+        request->send_count = strlen(response);
 }
 
-size_t process_scgi_message(
-        const char *it,
-        const char *it_end,
-        char *res_buf,
-        size_t res_buf_size,
-        struct sz_pair *headers_buf,
-        size_t headers_buf_size,
-        struct route_binding *routes,
+void process_scgi_message(
+        struct req_ctx *request,
+        const struct route_binding *routes,
         size_t routes_count
 ) {
         size_t headers_len;
+        const char *it = request->recv_buf;
+        const char *it_end = it + request->recv_count;
         it = netstrlen(it, it_end, &headers_len);
         if (headers_len == 0) {
                 WPRINTF("No content provided in headers netstring\n");
-                return 0;
+                request->send_count = 0;
+                return;
         }
 
         if (*it != ':') {
                 WPRINTF("Request is not SCGI compliant, no ':' found\n");
-                return 0;
+                request->send_count = 0;
+                return;
         }
         it++; // skip ':'
 
         const char *netstring_end = it + headers_len;
-        size_t headers_count = lookup_headers(it, netstring_end, headers_buf, headers_buf_size);
-        const char *request_uri = find_header_value(headers_buf, headers_count, "DOCUMENT_URI");
-        const char *request_method = find_header_value(headers_buf, headers_count, "REQUEST_METHOD");
-        const char *content_type = find_header_value(headers_buf, headers_count, "CONTENT_TYPE");
-        // const char *content_length = find_header_value(headers, headers_count, "CONTENT_LENGTH");
-        // const char *query_string = find_header_value(headers, headers_count, "QUERY_STRING");
+        size_t headers_count = lookup_headers(it, netstring_end, request->headers_buf, request->headers_buf_size);
+        const char *request_uri = find_header_value(request->headers_buf, headers_count, "DOCUMENT_URI");
+        const char *request_method = find_header_value(request->headers_buf, headers_count, "REQUEST_METHOD");
+        const char *content_type = find_header_value(request->headers_buf, headers_count, "CONTENT_TYPE");
+        // const char *content_length = find_header_value(request->headers_buf, headers_count, "CONTENT_LENGTH");
+        // const char *query_string = find_header_value(request->headers_buf, headers_count, "QUERY_STRING");
 
         if (*(it = netstring_end) != ',') {
                 WPRINTF("Request is not SCGI compliant, no ',' found\n");
-                return 0;
+                request->send_count = 0;
+                return;
         }
         it++; // skip ','
 
@@ -230,24 +229,27 @@ size_t process_scgi_message(
                         continue;
                 if (strcmp(routes[i].method, request_method) != 0) {
                         DPRINTF("Request method %s is not allowed\n", request_method);
-                        return respond(res_buf, res_buf_size,
+                        respond_sz(request,
                                 "Status: 405 Method Not Allowed\r\n" \
                                 "Content-Type: text/plain\r\n"       \
                                 "\r\n"                               \
                                 "Method Not Allowed");
+                        return;
                 }
                 if (strcmp(routes[i].accepts, content_type) != 0) {
                         DPRINTF("Media type %s is not allowed\n", content_type);
-                        return respond(res_buf, res_buf_size,
+                        respond_sz(request,
                                 "Status: 415 Unsupported Media Type\r\n" \
                                 "Content-Type: text/plain\r\n"           \
                                 "\r\n"                                   \
                                 "Unsupported Media Type");
+                        return;
                 }
-                return routes[i].handler(headers_buf, headers_count, it, it_end, res_buf, res_buf_size);
+                routes[i].handler(request);
+                return;
         }
         DPRINTF("Route %s not found\n", request_uri);
-        return respond(res_buf, res_buf_size,
+        respond_sz(request,
                 "Status: 404 Not Found\r\n"    \
                 "Content-Type: text/plain\r\n" \
                 "\r\n"                         \

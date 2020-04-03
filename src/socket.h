@@ -31,15 +31,10 @@ void close_listener(
 
 void accept_connections(
         SOCKET listener,
-        size_t (*handler)(const char *, const char *, char *, size_t, struct sz_pair *, size_t, struct route_binding *, size_t),
-        char *recv_buf,
-        size_t recv_buf_size,
-        char *send_buf,
-        size_t send_buf_size,
-        struct sz_pair *headers_buf,
-        size_t headers_buf_size,
+        void (*scgi_handler)(struct req_ctx *, const struct route_binding *, size_t),
         struct route_binding *routes,
-        size_t routes_count
+        size_t routes_count,
+        struct req_ctx *request
 );
 
 #endif

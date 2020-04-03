@@ -6,11 +6,25 @@ struct sz_pair {
         const char *value;
 };
 
+struct req_ctx {
+        char *const recv_buf;
+        const size_t recv_buf_size;
+        size_t recv_count;
+
+        char *const send_buf;
+        const size_t send_buf_size;
+        size_t send_count;
+
+        struct sz_pair *const headers_buf;
+        const size_t headers_buf_size;
+        size_t headers_count;
+};
+
 struct route_binding {
         const char *path;
         const char *method;
         const char *accepts;
-        size_t (*handler)(const struct sz_pair *, size_t, const char *, const char *, char *, size_t);
+        void (*handler)(struct req_ctx *);
 };
 
 const char *netstrlen(
@@ -48,20 +62,14 @@ size_t x_www_form_urlencoded_decode(
         size_t kv_buf_size
 );
 
-size_t respond(
-        char *res_buf,
-        size_t res_buf_size,
+void respond_sz(
+        struct req_ctx *request,
         const char *response
 );
 
-size_t process_scgi_message(
-        const char *it,
-        const char *it_end,
-        char *res_buf,
-        size_t res_buf_size,
-        struct sz_pair *headers_buf,
-        size_t headers_buf_size,
-        struct route_binding *routes,
+void process_scgi_message(
+        struct req_ctx *request,
+        const struct route_binding *routes,
         size_t routes_count
 );
 
