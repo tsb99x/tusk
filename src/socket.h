@@ -11,8 +11,6 @@ typedef int SOCKET;
 #define SOCKET_ERROR -1
 #endif
 
-#include "scgi.h"
-
 #ifdef WIN32
 #define EREPORT(msg) \
         EPRINTF(msg ", error: %d\n", WSAGetLastError());
@@ -20,6 +18,16 @@ typedef int SOCKET;
 #define EREPORT(msg) \
         perror(msg);
 #endif
+
+struct sock_ctx {
+        char *const recv_buf;
+        const size_t recv_buf_size;
+        size_t recv_count;
+
+        char *const send_buf;
+        const size_t send_buf_size;
+        size_t send_count;
+};
 
 SOCKET init_listener(
         int backlog_size
@@ -31,10 +39,8 @@ void close_listener(
 
 void accept_connections(
         SOCKET listener,
-        void (*scgi_handler)(struct req_ctx *, const struct route_binding *, size_t),
-        struct route_binding *routes,
-        size_t routes_count,
-        struct req_ctx *request
+        void (*scgi_handler)(struct sock_ctx *),
+        struct sock_ctx *ctx
 );
 
 #endif

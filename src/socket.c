@@ -114,19 +114,17 @@ void close_listener(
 
 void process_data(
         SOCKET client_socket,
-        void (*scgi_handler)(struct req_ctx *, const struct route_binding *, size_t),
-        struct route_binding *routes,
-        size_t routes_count,
-        struct req_ctx *request
+        void (*scgi_handler)(struct sock_ctx *),
+        struct sock_ctx *ctx
 ) {
-        size_t recv_bytes = recv(client_socket, request->recv_buf, (int) request->recv_buf_size, 0);
+        size_t recv_bytes = recv(client_socket, ctx->recv_buf, (int) ctx->recv_buf_size, 0);
         if (recv_bytes > 0) {
                 DPRINTF("Received request with size of %zu byte(s)\n", recv_bytes);
-                request->recv_count = recv_bytes;
-                (*scgi_handler)(request, routes, routes_count);
-                if (request->send_count > 0) {
-                        send(client_socket, request->send_buf, (int) request->send_count, 0);
-                        DPRINTF("Sent response with size of %zu byte(s)\n", request->send_count);
+                ctx->recv_count = recv_bytes;
+                (*scgi_handler)(ctx);
+                if (ctx->send_count > 0) {
+                        send(client_socket, ctx->send_buf, (int) ctx->send_count, 0);
+                        DPRINTF("Sent response with size of %zu byte(s)\n", ctx->send_count);
                 }
         } else if (recv_bytes == 0) {
                 DPRINTF("Connection closed by client\n");
@@ -138,10 +136,8 @@ void process_data(
 
 void accept_connections(
         SOCKET listener,
-        void (*scgi_handler)(struct req_ctx *, const struct route_binding *, size_t),
-        struct route_binding *routes,
-        size_t routes_count,
-        struct req_ctx *request
+        void (*scgi_handler)(struct sock_ctx *),
+        struct sock_ctx *ctx
 ) {
         struct sockaddr client_addr;
         size_t sockaddr_size = sizeof(struct sockaddr);
@@ -149,7 +145,7 @@ void accept_connections(
         DPRINTF("Waiting for connections\n");
         while ((client_socket = accept(listener, &client_addr, (socklen_t *) &sockaddr_size)) != INVALID_SOCKET) {
                 DPRINTF("Connection accepted\n");
-                process_data(client_socket, scgi_handler, routes, routes_count, request);
+                process_data(client_socket, scgi_handler, ctx);
         }
         EREPORT("Failed to accept connection");
         close_listener(listener);

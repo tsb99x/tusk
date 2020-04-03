@@ -1,12 +1,14 @@
 #ifndef __SCGI_H__
 #define __SCGI_H__
 
+#include "socket.h"
+
 struct sz_pair {
         const char *key;
         const char *value;
 };
 
-struct req_ctx {
+struct scgi_ctx {
         char *const recv_buf;
         const size_t recv_buf_size;
         size_t recv_count;
@@ -14,6 +16,9 @@ struct req_ctx {
         char *const send_buf;
         const size_t send_buf_size;
         size_t send_count;
+
+        const struct route_binding *routes;
+        const size_t routes_count;
 
         struct sz_pair *const headers_buf;
         const size_t headers_buf_size;
@@ -24,7 +29,7 @@ struct route_binding {
         const char *path;
         const char *method;
         const char *accepts;
-        void (*handler)(struct req_ctx *);
+        void (*handler)(struct scgi_ctx *);
 };
 
 const char *netstrlen(
@@ -63,14 +68,12 @@ size_t x_www_form_urlencoded_decode(
 );
 
 void respond_sz(
-        struct req_ctx *request,
+        struct scgi_ctx *ctx,
         const char *response
 );
 
 void process_scgi_message(
-        struct req_ctx *request,
-        const struct route_binding *routes,
-        size_t routes_count
+        struct sock_ctx *sock_ctx
 );
 
 #endif

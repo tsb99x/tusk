@@ -34,7 +34,7 @@ void shutdown_handler(
 }
 
 void hello_handler(
-        struct req_ctx *request
+        struct scgi_ctx *ctx
 ) {
         IPRINTF("Handling /hello\n");
 
@@ -44,7 +44,7 @@ void hello_handler(
         //         form_data, FORM_DATA_BUF_SIZE
         // );
 
-        respond_sz(request,
+        respond_sz(ctx,
                 "Status: 200 OK\r\n"                \
                 "Content-Type: text/plain\r\n"      \
                 "\r\n"                              \
@@ -60,25 +60,27 @@ struct route_binding routes[] = {
         }
 };
 
+struct scgi_ctx req_ctx = {
+        .recv_buf = recv_buf,
+        .recv_buf_size = RECV_BUF_SIZE,
+        .recv_count = 0,
+        .send_buf = send_buf,
+        .send_buf_size = SEND_BUF_SIZE,
+        .send_count = 0,
+        .routes = routes,
+        .routes_count = SIZE_OF_ARRAY(routes),
+        .headers_buf = headers_buf,
+        .headers_buf_size = HEADERS_BUF_SIZE,
+        .headers_count = 0
+};
+
 int main(
         void
 ) {
-        struct req_ctx request = {
-                .recv_buf = recv_buf,
-                .recv_buf_size = RECV_BUF_SIZE,
-                .recv_count = 0,
-                .headers_buf = headers_buf,
-                .headers_buf_size = HEADERS_BUF_SIZE,
-                .headers_count = 0,
-                .send_buf = send_buf,
-                .send_buf_size = SEND_BUF_SIZE,
-                .send_count = 0
-        };
-
         IPRINTF("Starting Tusk Server\n");
         listener = init_listener(BACKLOG_SIZE);
         IPRINTF("Server launch success\n");
         signal(SIGINT, shutdown_handler);
-        accept_connections(listener, process_scgi_message, routes, SIZE_OF_ARRAY(routes), &request);
+        accept_connections(listener, process_scgi_message, (struct sock_ctx *) &req_ctx);
         return EXIT_SUCCESS;
 }
