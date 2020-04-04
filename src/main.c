@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
 
@@ -36,7 +35,7 @@ void shutdown_handler(
 void hello_handler(
         struct scgi_ctx *ctx
 ) {
-        IPRINTF("Handling /hello\n");
+        IPRINTF("Handling /hello");
 
         // x_www_form_urlencoded_decode(
         //         it, it_end, 
@@ -82,9 +81,9 @@ struct scgi_ctx req_ctx = {
 int main(
         void
 ) {
-        IPRINTF("Starting Tusk Server\n");
+        IPRINTF("Starting Tusk Server");
         listener = init_listener(BACKLOG_SIZE);
-        IPRINTF("Server launch success\n");
+        IPRINTF("Server launch success");
         signal(SIGINT, shutdown_handler);
         accept_connections(listener, process_scgi_message, (struct sock_ctx *) &req_ctx);
         return EXIT_SUCCESS;

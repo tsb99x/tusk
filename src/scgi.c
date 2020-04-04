@@ -26,7 +26,7 @@ const char *netstrlen(
 ) {
         for (*len = 0; it < it_end && isdigit(*it); it++)
                 *len = *len * 10 + digit_to_number(*it);
-        DPRINTF("Netstring length: %zu\n", *len);
+        DPRINTF("Netstring length: %zu", *len);
         return it;
 }
 
@@ -40,18 +40,18 @@ const char *lookup_headers(
                 headers->ptr[pos].key = it;
                 it += strlen(it) + 1; // skip '\0'
                 if (it >= it_end) {
-                        WPRINTF("Incomplete header found\n");
+                        WPRINTF("Incomplete header found");
                         break;
                 }
                 headers->ptr[pos].value = it;
                 it += strlen(it) + 1; // skip '\0'
-                DPRINTF("Found header: %s = %s\n", headers->ptr[pos].key, headers->ptr[pos].value);
+                DPRINTF("Found header: %s = %s", headers->ptr[pos].key, headers->ptr[pos].value);
                 if (++pos >= headers->size) {
-                        WPRINTF("Headers buffer exhausted\n");
+                        WPRINTF("Headers buffer exhausted");
                         break;
                 }
         }
-        DPRINTF("Total headers count: %zu\n", pos);
+        DPRINTF("Total headers count: %zu", pos);
         headers->count = pos;
         return it;
 }
@@ -98,7 +98,7 @@ char from_url_encoding(
         chr += isdigit(second)
                 ? digit_to_number(second)
                 : hex_char_to_number(second);
-        DPRINTF("Decoded char '%c'\n", chr);
+        DPRINTF("Decoded char '%c'", chr);
         return chr;
 }
 
@@ -112,7 +112,7 @@ size_t url_decode(
         while (it < it_end) {
                 if (*it == '%') {
                         if (it + 2 >= it_end) { // do we have 2 chars next?
-                                WPRINTF("Malformed URL encoded string\n");
+                                WPRINTF("Malformed URL encoded string");
                                 break;
                         }
                         char first = *(++it);
@@ -123,12 +123,12 @@ size_t url_decode(
                 }
                 it++;
                 if (++pos >= sz_buf_size - 1) { // last position is for '\0'
-                        WPRINTF("Destination buffer exhausted\n");
+                        WPRINTF("Destination buffer exhausted");
                         break;
                 }
         }
         sz_buf[pos] = '\0';
-        DPRINTF("Decoded string: %s\n", sz_buf);
+        DPRINTF("Decoded string: %s", sz_buf);
         return pos;
 }
 
@@ -145,7 +145,7 @@ size_t x_www_form_urlencoded_decode(
                 const char *key_start = it;
                 const char *val_start = memchr(it, '=', it_end - it);
                 if (val_start == NULL || ++val_start >= it_end) {
-                        WPRINTF("Malformed www-form-urlencoded body\n");
+                        WPRINTF("Malformed www-form-urlencoded body");
                         return 0;
                 }
                 const char *key_end = val_start - 1; // rewind to '='
@@ -155,20 +155,20 @@ size_t x_www_form_urlencoded_decode(
                 kv_buf[pos].key = sz_buf;
                 sz_buf += url_decode(key_start, key_end, sz_buf, sz_buf_end - sz_buf);
                 if (++sz_buf >= sz_buf_end) { // skip '\0'
-                        WPRINTF("String zero buffer exhausted\n");
+                        WPRINTF("String zero buffer exhausted");
                         break;
                 }
 
                 kv_buf[pos].value = sz_buf;
                 sz_buf += url_decode(val_start, val_end, sz_buf, sz_buf_end - sz_buf);
                 if (++sz_buf >= sz_buf_end) { // skip '\0'
-                        WPRINTF("String zero buffer exhausted\n");
+                        WPRINTF("String zero buffer exhausted");
                         break;
                 }
 
-                DPRINTF("Found form data kv: %s = %s\n", kv_buf[pos].key, kv_buf[pos].value);
+                DPRINTF("Found form data kv: %s = %s", kv_buf[pos].key, kv_buf[pos].value);
                 if (++pos >= kv_buf_size) {
-                        WPRINTF("KV buffer exhausted\n");
+                        WPRINTF("KV buffer exhausted");
                         break;
                 }
                 if (it == NULL)
@@ -190,18 +190,18 @@ void process_scgi_message(
         struct sock_ctx *sock_ctx
 ) {
         struct scgi_ctx *ctx = (struct scgi_ctx *) sock_ctx;
-        size_t headers_len;
+
         const char *it = ctx->recv.ptr;
-        const char *it_end = it + ctx->recv.size;
-        it = netstrlen(it, it_end, &headers_len);
+        size_t headers_len;
+        it = netstrlen(it, it + ctx->recv.size, &headers_len);
         if (headers_len == 0) {
-                WPRINTF("No content provided in headers netstring\n");
+                WPRINTF("No content provided in headers netstring");
                 ctx->send.count = 0;
                 return;
         }
 
         if (*it != ':') {
-                WPRINTF("Request is not SCGI compliant, no ':' found\n");
+                WPRINTF("Request is not SCGI compliant, no ':' found");
                 ctx->send.count = 0;
                 return;
         }
@@ -215,7 +215,7 @@ void process_scgi_message(
         // const char *query_string = find_header_value(&ctx->headers, "QUERY_STRING");
 
         if (*it != ',') {
-                WPRINTF("Request is not SCGI compliant, no ',' found\n");
+                WPRINTF("Request is not SCGI compliant, no ',' found");
                 ctx->send.count = 0;
                 return;
         }
@@ -225,7 +225,7 @@ void process_scgi_message(
                 if (strcmp(ctx->routes.ptr[i].path, request_uri) != 0)
                         continue;
                 if (strcmp(ctx->routes.ptr[i].method, request_method) != 0) {
-                        DPRINTF("Request method %s is not allowed\n", request_method);
+                        DPRINTF("Request method %s is not allowed", request_method);
                         respond_sz(&ctx->send,
                                 "Status: 405 Method Not Allowed\r\n" \
                                 "Content-Type: text/plain\r\n"       \
@@ -234,7 +234,7 @@ void process_scgi_message(
                         return;
                 }
                 if (strcmp(ctx->routes.ptr[i].accepts, content_type) != 0) {
-                        DPRINTF("Media type %s is not allowed\n", content_type);
+                        DPRINTF("Media type %s is not allowed", content_type);
                         respond_sz(&ctx->send,
                                 "Status: 415 Unsupported Media Type\r\n" \
                                 "Content-Type: text/plain\r\n"           \
@@ -245,7 +245,7 @@ void process_scgi_message(
                 ctx->routes.ptr[i].handler(ctx);
                 return;
         }
-        DPRINTF("Route %s not found\n", request_uri);
+        DPRINTF("Route %s not found", request_uri);
         respond_sz(&ctx->send,
                 "Status: 404 Not Found\r\n"    \
                 "Content-Type: text/plain\r\n" \

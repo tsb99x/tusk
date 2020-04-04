@@ -3,23 +3,23 @@
 
 #include <stdio.h>
 
-#define EPRINTF(...) \
-        fprintf(stderr, "[ ERROR ] " __VA_ARGS__)
+#define EPRINTF(msg, ...) \
+        fprintf(stderr, "[ ERROR ] " msg "\n", ##__VA_ARGS__)
 
-#define WPRINTF(...) \
-        do {                                      \
-                printf("[ WARN  ] " __VA_ARGS__); \
-                fflush(stdout);                   \
+#define WPRINTF(msg, ...) \
+        do {                                                  \
+                printf("[ WARN  ] " msg "\n", ##__VA_ARGS__); \
+                fflush(stdout);                               \
         } while(0)
 
-#define IPRINTF(...) \
-        printf("[ INFO  ] " __VA_ARGS__)
+#define IPRINTF(msg, ...) \
+        printf("[ INFO  ] " msg "\n", ##__VA_ARGS__)
 
 #ifndef NDEBUG
-#define DPRINTF(...)                              \
-        do {                                      \
-                printf("[ DEBUG ] " __VA_ARGS__); \
-                fflush(stdout);                   \
+#define DPRINTF(msg, ...)                                     \
+        do {                                                  \
+                printf("[ DEBUG ] " msg "\n", ##__VA_ARGS__); \
+                fflush(stdout);                               \
         } while(0)
 #else
 #define DPRINTF(...)
