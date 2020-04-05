@@ -1,2 +1,6 @@
 /.vscode
 /build
+
+# generated files
+/src/routes/hello.h
+/src/routes/login.h

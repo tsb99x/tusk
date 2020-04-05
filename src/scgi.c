@@ -182,8 +182,14 @@ void respond_sz(
         struct char_buf *send,
         const char *response
 ) {
-        strncpy(send->ptr, response, send->size - 1);
-        send->count = strlen(response);
+        size_t len = strlen(response);
+        if (len > send->size) {
+                EPRINTF("Length of response string is more than buffer size");
+                send->count = 0;
+                return;
+        }
+        memcpy(send->ptr, response, len);
+        send->count = len;
 }
 
 void process_scgi_message(
@@ -242,6 +248,7 @@ void process_scgi_message(
                                 "Unsupported Media Type");
                         return;
                 }
+                IPRINTF("Handling %s route", request_uri);
                 ctx->routes.ptr[i].handler(ctx);
                 return;
         }

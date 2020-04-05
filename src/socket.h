@@ -1,6 +1,8 @@
 #ifndef __SOCKET_H__
 #define __SOCKET_H__
 
+#include <stddef.h>
+
 #ifdef WIN32
 #include <winsock2.h>
 #else

@@ -2,3 +2,8 @@
 /.vscode
 /build
 /docker-compose.yml
+/nginx.conf
+
+# generated files
+/src/routes/hello.h
+/src/routes/login.h

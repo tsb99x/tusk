@@ -7,7 +7,7 @@ indent_style = space
 [*.{c,h}]
 indent_size = 8
 
-[Dockerfile]
+[{CMakeLists.txt,Dockerfile,*.hbs}]
 indent_size = 4
 
 [*.yml]
