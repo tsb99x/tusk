@@ -6,4 +6,4 @@ if(NOT MSVC)
     add_compile_options(-Wall -Wextra -pedantic -Werror)
 endif()
 
-add_executable(${PROJECT_NAME} mustax.c)
+add_executable(${PROJECT_NAME} mustax.c node.c)

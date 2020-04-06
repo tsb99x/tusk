@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "node.h"
+
 #define SZ_POOL_SIZE 8196
 char sz_pool[SZ_POOL_SIZE];
 char *sz_pool_pos = sz_pool;
@@ -37,38 +39,6 @@ void replace_chars(
         }
 }
 
-enum node_type {
-        LITERAL,
-        VARIABLE
-};
-
-struct node {
-        enum node_type type;
-        const char *value;
-};
-
-#define NODES_BUF_SIZE 256
-struct node nodes[NODES_BUF_SIZE];
-struct node *nodes_pos = nodes;
-
-struct node *new_node(
-        enum node_type type,
-        const char *value
-) {
-        struct node *ptr = nodes_pos;
-        ptr->type = type;
-        ptr->value = value;
-        nodes_pos++;
-        return ptr;
-}
-
-struct node *next_node(
-        struct node *prev
-) {
-        struct node *next = prev++;
-        return (next >= nodes_pos) ? NULL : next;
-}
-
 char *skip_spaces(
         char *str
 ) {
@@ -83,7 +53,7 @@ char *move_memory_block(
         char *end
 ) {
         if (beg != dst) {
-                size_t diff = beg - dst;
+                ptrdiff_t diff = beg - dst;
                 memmove(dst, beg, end - beg + 1); // include '\0'
                 end -= diff;
         }
@@ -118,6 +88,7 @@ void cleanup_literal(
 }
 
 void split_tokens(
+        struct nodes_pool *nodes,
         char *buf,
         char *buf_end
 ) {
@@ -128,7 +99,7 @@ void split_tokens(
         while ((op_brace = strstr(buf, "{{")) != NULL) {
                 sz_loc = place_in_pool(buf, op_brace - buf);
                 cleanup_literal(sz_loc);
-                new_node(LITERAL, sz_loc);
+                emplace_node(nodes, LITERAL, sz_loc);
 
                 op_brace += 2; // skip "{{"
                 ed_brace = strstr(buf, "}}");
@@ -139,7 +110,7 @@ void split_tokens(
 
                 sz_loc = place_in_pool(op_brace, ed_brace - op_brace);
                 cleanup_literal(sz_loc);
-                new_node(VARIABLE, sz_loc);
+                emplace_node(nodes, VARIABLE, sz_loc);
                 
                 buf = ed_brace + 2; // skip "}}"
         }
@@ -147,7 +118,7 @@ void split_tokens(
         if (buf <= buf_end) {
                 sz_loc = place_in_pool(buf, buf_end - buf);
                 cleanup_literal(sz_loc);
-                new_node(LITERAL, sz_loc);
+                emplace_node(nodes, LITERAL, sz_loc);
         }
 }
 
@@ -180,9 +151,59 @@ size_t load_file_to_buf(
 
 #define TAB "        "
 
+struct count_state {
+        size_t vars_count;
+};
+
+void count_variables(
+        struct node *el,
+        struct count_state *state
+) {
+        if (VARIABLE == el->type)
+                state->vars_count++;
+}
+
+struct output_state {
+        FILE *file;
+};
+
+void output_var_into_param(
+        struct node *el,
+        struct output_state *state
+) {
+        if (el->type != VARIABLE)
+                return;
+        fprintf(state->file,
+                TAB "const char *%s;\n",
+                el->value);
+}
+
+void output_copy_process(
+        struct node *el,
+        struct output_state *state
+) {
+        if (el->type == LITERAL) {
+                size_t len = strlen(el->value);
+                fprintf(state->file,
+                        TAB "memcpy(it, \"%s\", %zu);\n" \
+                        TAB "it += %zu;\n",
+                        el->value, len, len);
+        }
+        if (el->type == VARIABLE) {
+                fprintf(state->file,
+                        TAB "if (params->%s != NULL) {\n" \
+                        TAB TAB "size_t len = strlen(params->%s);\n" \
+                        TAB TAB "strcpy(it, params->%s);\n" \
+                        TAB TAB "it += len;\n" \
+                        TAB "}\n",
+                        el->value, el->value, el->value);
+        }
+}
+
 void generate_and_output_to(
         const char *filename,
-        const char *base_name
+        const char *base_name,
+        struct nodes_pool *nodes
 ) {
         FILE *file = fopen(filename, "w");
         if (file == NULL) {
@@ -198,22 +219,16 @@ void generate_and_output_to(
                 "\n",
                 base_name, base_name);
 
-        size_t vars_count = 0;
-        for (struct node *it = nodes; it < nodes_pos; it++)
-                if (VARIABLE == it->type)
-                        vars_count++;
+        struct count_state c_state = {.vars_count = 0};
+        for_each_node(nodes, &c_state, count_variables);
+        size_t vars_count = c_state.vars_count;
 
+        struct output_state o_state = {.file = file};
         if (vars_count > 0) {
                 fprintf(file,
                         "struct %s_params {\n",
                         base_name);
-                for (struct node *it = nodes; it < nodes_pos; it++) {
-                        if (it->type != VARIABLE)
-                                continue;
-                        fprintf(file,
-                                TAB "const char *%s;\n",
-                                it->value);
-                }
+                for_each_node(nodes, &o_state, output_var_into_param);
                 fprintf(file,
                         "};\n\n");
         }
@@ -231,24 +246,7 @@ void generate_and_output_to(
                 TAB "char *dst\n" \
                 ") {\n" \
                 TAB "char *it = dst;\n");
-        for (struct node *it = nodes; it < nodes_pos; it++) {
-                if (it->type == LITERAL) {
-                        size_t len = strlen(it->value);
-                        fprintf(file,
-                                TAB "memcpy(it, \"%s\", %zu);\n" \
-                                TAB "it += %zu;\n",
-                                it->value, len, len);
-                }
-                if (it->type == VARIABLE) {
-                        fprintf(file,
-                                TAB "if (params->%s != NULL) {\n" \
-                                TAB TAB "size_t len = strlen(params->%s);\n" \
-                                TAB TAB "strcpy(it, params->%s);\n" \
-                                TAB TAB "it += len;\n" \
-                                TAB "}\n",
-                                it->value, it->value, it->value);
-                }
-        }
+        for_each_node(nodes, &o_state, output_copy_process);
         fprintf(file,
                 TAB "return it - dst;\n" \
                 "}\n" \
@@ -257,7 +255,8 @@ void generate_and_output_to(
         fclose(file);
 }
 
-#define STR_BUF_SIZE 128
+#define NODES_POOL_SIZE 256
+#define DEF_STR_SIZE 128
 
 int main(
         int argc,
@@ -267,6 +266,8 @@ int main(
                 fprintf(stderr, "At least one template base name is required!");
                 exit(EXIT_FAILURE);
         }
+
+        struct nodes_pool *nodes = init_nodes_pool(NODES_POOL_SIZE);
 
         for (int i = 1; i < argc; i++) { // skip program name
                 char *base_name = argv[i];
@@ -279,23 +280,25 @@ int main(
                         last_slash = strrchr(base_name, '\\');
                 base_name = last_slash + 1;
 
-                char input[STR_BUF_SIZE];
-                snprintf(input, STR_BUF_SIZE, "%s.hbs", argv[i]);
+                char input[DEF_STR_SIZE];
+                snprintf(input, DEF_STR_SIZE, "%s.hbs", argv[i]);
 
-                char output[STR_BUF_SIZE];
-                snprintf(output, STR_BUF_SIZE, "%s.h", argv[i]);
+                char output[DEF_STR_SIZE];
+                snprintf(output, DEF_STR_SIZE, "%s.h", argv[i]);
 
                 printf("Generating '%s' from '%s' ... ", output, input);
                 fflush(stdout);
 
                 size_t input_size = load_file_to_buf(input, src_buf, SRC_BUF_SIZE);
                 replace_chars(src_buf, input_size);
-                split_tokens(src_buf, src_buf + input_size);
-                generate_and_output_to(output, base_name);
+                split_tokens(nodes, src_buf, src_buf + input_size);
+                generate_and_output_to(output, base_name, nodes);
 
-                nodes_pos = nodes; // discard all nodes used
+                cleanup_nodes_pool(nodes);
 
                 printf("Success!\n");
         }
+
+        destroy_nodes_pool(nodes);
         return EXIT_SUCCESS;
 }
