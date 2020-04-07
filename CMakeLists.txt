@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.7)
 project(tusk C)
 set(CMAKE_C_STANDARD 11)
 
-add_subdirectory(mustax)
+add_subdirectory(rocker)
 
 if(NOT MSVC)
     add_compile_options(-Wall -Wextra -pedantic -Werror)
@@ -13,8 +13,8 @@ set(templates
     ${CMAKE_CURRENT_SOURCE_DIR}/src/routes/login.h)
 add_custom_command(
     OUTPUT ${templates}
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/mustax/mustax ${templates}
-    DEPENDS mustax)
+    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/rocker/rocker ${templates}
+    DEPENDS rocker)
 add_custom_target(gen_templates
     DEPENDS ${templates})
 
