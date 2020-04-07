@@ -1,24 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
+#include "str_pool.h"
 #include "node.h"
-
-#define SZ_POOL_SIZE 8196
-char sz_pool[SZ_POOL_SIZE];
-char *sz_pool_pos = sz_pool;
-
-char *place_in_pool(
-        const char *src,
-        size_t src_len
-) {
-        char *orig_pos = sz_pool_pos;
-        memcpy(orig_pos, src, src_len);
-        sz_pool_pos += src_len;
-        *sz_pool_pos = '\0';
-        sz_pool_pos++;
-        return orig_pos;
-}
 
 long file_size(
         FILE *file
@@ -88,6 +74,7 @@ void cleanup_literal(
 }
 
 void split_tokens(
+        struct str_pool *strings,
         struct nodes_pool *nodes,
         char *buf,
         char *buf_end
@@ -97,7 +84,7 @@ void split_tokens(
         char *ed_brace;
 
         while ((op_brace = strstr(buf, "{{")) != NULL) {
-                sz_loc = place_in_pool(buf, op_brace - buf);
+                sz_loc = copy_into_pool(strings, buf, op_brace - buf);
                 cleanup_literal(sz_loc);
                 emplace_node(nodes, LITERAL, sz_loc);
 
@@ -108,7 +95,7 @@ void split_tokens(
                         return; // FIXME : think about this case!
                 }
 
-                sz_loc = place_in_pool(op_brace, ed_brace - op_brace);
+                sz_loc = copy_into_pool(strings, op_brace, ed_brace - op_brace);
                 cleanup_literal(sz_loc);
                 emplace_node(nodes, VARIABLE, sz_loc);
                 
@@ -116,7 +103,7 @@ void split_tokens(
         }
 
         if (buf <= buf_end) {
-                sz_loc = place_in_pool(buf, buf_end - buf);
+                sz_loc = copy_into_pool(strings, buf, buf_end - buf);
                 cleanup_literal(sz_loc);
                 emplace_node(nodes, LITERAL, sz_loc);
         }
@@ -157,10 +144,11 @@ struct count_state {
 
 void count_variables(
         struct node *el,
-        struct count_state *state
+        void *state
 ) {
+        struct count_state *c_state = (struct count_state *) state;
         if (VARIABLE == el->type)
-                state->vars_count++;
+                c_state->vars_count++;
 }
 
 struct output_state {
@@ -169,28 +157,30 @@ struct output_state {
 
 void output_var_into_param(
         struct node *el,
-        struct output_state *state
+        void *state
 ) {
+        struct output_state *o_state = (struct output_state *) state;
         if (el->type != VARIABLE)
                 return;
-        fprintf(state->file,
+        fprintf(o_state->file,
                 TAB "const char *%s;\n",
                 el->value);
 }
 
 void output_copy_process(
         struct node *el,
-        struct output_state *state
+        void *state
 ) {
+        struct output_state *o_state = (struct output_state *) state;
         if (el->type == LITERAL) {
                 size_t len = strlen(el->value);
-                fprintf(state->file,
+                fprintf(o_state->file,
                         TAB "memcpy(it, \"%s\", %zu);\n" \
                         TAB "it += %zu;\n",
                         el->value, len, len);
         }
         if (el->type == VARIABLE) {
-                fprintf(state->file,
+                fprintf(o_state->file,
                         TAB "if (params->%s != NULL) {\n" \
                         TAB TAB "size_t len = strlen(params->%s);\n" \
                         TAB TAB "strcpy(it, params->%s);\n" \
@@ -255,6 +245,28 @@ void generate_and_output_to(
         fclose(file);
 }
 
+// TEST
+
+void remove_file_ext(
+        char *path
+) {
+        char *dot = strchr(path, '.');
+        if (dot != NULL)
+                *dot = '\0';
+}
+
+// TEST
+
+char *pick_filename(
+        char *path
+) {
+        char *sep = strrchr(path, '/');
+        if (sep == NULL)
+                sep = strrchr(path, '\\');
+        return (sep == NULL) ? path : sep + 1;
+}
+
+#define STR_POOL_SIZE 65535
 #define NODES_POOL_SIZE 256
 #define DEF_STR_SIZE 128
 
@@ -267,18 +279,13 @@ int main(
                 exit(EXIT_FAILURE);
         }
 
+        struct str_pool *strings = init_str_pool(STR_POOL_SIZE);
         struct nodes_pool *nodes = init_nodes_pool(NODES_POOL_SIZE);
 
         for (int i = 1; i < argc; i++) { // skip program name
                 char *base_name = argv[i];
-
-                char *first_dot = strchr(base_name, '.');
-                *first_dot = '\0';
-
-                char *last_slash = strrchr(base_name, '/');
-                if (last_slash == NULL)
-                        last_slash = strrchr(base_name, '\\');
-                base_name = last_slash + 1;
+                base_name = pick_filename(base_name);
+                remove_file_ext(base_name);
 
                 char input[DEF_STR_SIZE];
                 snprintf(input, DEF_STR_SIZE, "%s.hbs", argv[i]);
@@ -291,14 +298,16 @@ int main(
 
                 size_t input_size = load_file_to_buf(input, src_buf, SRC_BUF_SIZE);
                 replace_chars(src_buf, input_size);
-                split_tokens(nodes, src_buf, src_buf + input_size);
+                split_tokens(strings, nodes, src_buf, src_buf + input_size);
                 generate_and_output_to(output, base_name, nodes);
 
+                cleanup_str_pool(strings);
                 cleanup_nodes_pool(nodes);
 
                 printf("Success!\n");
         }
 
         destroy_nodes_pool(nodes);
+        destroy_str_pool(strings);
         return EXIT_SUCCESS;
 }
