@@ -1,5 +1,4 @@
-#ifndef __SOCKET_H__
-#define __SOCKET_H__
+#pragma once
 
 #include <stddef.h>
 
@@ -33,5 +32,3 @@ void accept_connections(
         void (*scgi_handler)(struct sock_ctx *),
         struct sock_ctx *ctx
 );
-
-#endif

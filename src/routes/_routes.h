@@ -1,5 +1,4 @@
-#ifndef __ROUTES_H__
-#define __ROUTES_H__
+#pragma once
 
 #include "../scgi.h"
 
@@ -10,5 +9,3 @@ void hello_handler(
 void login_handler(
         struct scgi_ctx *ctx
 );
-
-#endif

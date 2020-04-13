@@ -1,5 +1,4 @@
-#ifndef __SCGI_H__
-#define __SCGI_H__
+#pragma once
 
 #include "socket.h"
 
@@ -74,5 +73,3 @@ void respond_sz(
 void process_scgi_message(
         struct sock_ctx *sock_ctx
 );
-
-#endif
