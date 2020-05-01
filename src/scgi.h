@@ -22,7 +22,7 @@ struct scgi_ctx {
         struct char_buf recv;
         struct char_buf send;
         struct headers_buf headers;
-        const struct routes_arr routes; 
+        const struct routes_arr routes;
 };
 
 struct route_binding {

@@ -102,7 +102,7 @@ void enable_listener(
         SOCKET socket,
         int backlog_size
 ) {
-        if (listen(socket, backlog_size) != 0) {
+        if (listen(socket, backlog_size) != NO_ERROR) {
                 EREPORT("Failed to listen on socket");
                 close_listener(socket);
                 exit(EXIT_FAILURE);
@@ -143,7 +143,7 @@ void send_data(
         SOCKET client_socket,
         struct char_buf *send_buf
 ) {
-        if (send_buf->count == 0) 
+        if (send_buf->count == 0)
                 return;
         send(client_socket, send_buf->ptr, (int) send_buf->count, 0);
         DPRINTF("Sent response with size of %zu byte(s)", send_buf->count);
