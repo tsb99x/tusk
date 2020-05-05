@@ -4,4 +4,5 @@ project(tusk LANGUAGES C)
 add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 
 add_subdirectory(rocker)
+enable_testing()
 add_subdirectory(src)
