@@ -1,11 +1,11 @@
+#include <scgi.h>
+
+#include <utility.h>
+
 #include <ctype.h>
 #include <stdbool.h>
-#include <string.h>
 #include <stdlib.h>
-
-#include "utility.h"
-
-#include "scgi.h"
+#include <string.h>
 
 char digit_to_number(
         char symbol

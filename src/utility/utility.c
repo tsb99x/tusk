@@ -1,6 +1,6 @@
-#include <stdlib.h>
+#include <utility.h>
 
-#include "utility.h"
+#include <stdlib.h>
 
 const char *get_env_var(
         const char *name,

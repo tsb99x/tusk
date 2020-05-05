@@ -1,12 +1,12 @@
-#include "_routes.h"
+#include <routes.h>
 
-#include "../utility.h"
+#include <utility.h>
 
 void hello_handler(
         struct scgi_ctx *ctx
 ) {
         // x_www_form_urlencoded_decode(
-        //         it, it_end, 
+        //         it, it_end,
         //         raw_sz_form_data, raw_sz_form_data + RAW_SZ_FORM_DATA_BUF_SIZE,
         //         form_data, FORM_DATA_BUF_SIZE
         // );

@@ -1,8 +1,8 @@
+#include <scgi.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "scgi.h"
 
 #define REQUIRE(predicate)                                                      \
         do {                                                                    \

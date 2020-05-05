@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../scgi.h"
+#include <scgi.h>
 
 void hello_handler(
         struct scgi_ctx *ctx

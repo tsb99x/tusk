@@ -1,4 +1,6 @@
-#include <stdlib.h>
+#include <socket.h>
+
+#include <utility.h>
 
 #ifndef WIN32
 #include <unistd.h>
@@ -6,9 +8,7 @@
 #include <arpa/inet.h>
 #endif
 
-#include "utility.h"
-
-#include "socket.h"
+#include <stdlib.h>
 
 #ifdef WIN32
 typedef int socklen_t;

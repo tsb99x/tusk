@@ -1,0 +1,6 @@
+add_library(socket socket.c)
+target_link_libraries(socket utility)
+if(WIN32)
+    target_link_libraries(socket ws2_32)
+endif()
+target_include_directories(socket PUBLIC include)

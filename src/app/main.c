@@ -1,12 +1,12 @@
-#include <stdlib.h>
-#include <signal.h>
+#include <routes.h>
+#include <utility.h>
 
 #ifdef WIN32
 #include <excpt.h>
 #endif
 
-#include "utility.h"
-#include "routes/_routes.h"
+#include <signal.h>
+#include <stdlib.h>
 
 #define BACKLOG_SIZE 32
 

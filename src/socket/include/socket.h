@@ -1,12 +1,12 @@
 #pragma once
 
-#include <stddef.h>
-
 #ifdef WIN32
 #include <winsock2.h>
 #else
 typedef int SOCKET;
 #endif
+
+#include <stddef.h>
 
 struct char_buf {
         char *const ptr;

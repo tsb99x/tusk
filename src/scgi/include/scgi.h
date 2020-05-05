@@ -1,6 +1,6 @@
 #pragma once
 
-#include "socket.h"
+#include <socket.h>
 
 struct sz_pair {
         const char *key;
