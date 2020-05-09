@@ -3,7 +3,7 @@ set(templates
     ${CMAKE_CURRENT_LIST_DIR}/login.h)
 add_custom_command(
     OUTPUT ${templates}
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/../../rocker/rocker ${templates}
+    COMMAND $<TARGET_FILE:rocker> ${templates}
     DEPENDS rocker)
 add_custom_target(gen_templates
     DEPENDS ${templates})
