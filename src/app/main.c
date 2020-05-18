@@ -1,10 +1,6 @@
 #include <routes.h>
 #include <utility.h>
 
-#ifdef WIN32
-#include <excpt.h>
-#endif
-
 #include <signal.h>
 #include <stdlib.h>
 
@@ -72,22 +68,10 @@ struct scgi_ctx req_ctx = {
 int main(
         void
 ) {
-        #ifdef WIN32
-        __try {
-        #endif
-
         IPRINTF("Starting Tusk Server");
         listener = init_listener(BACKLOG_SIZE);
         IPRINTF("Server launch success");
         signal(SIGINT, shutdown_handler);
         accept_connections(listener, process_scgi_message, (struct sock_ctx *) &req_ctx);
-
-        #ifdef WIN32
-        } __except(EXCEPTION_EXECUTE_HANDLER) {
-                EPRINTF("Exception occurred, code: %d", GetExceptionCode());
-                return EXIT_FAILURE;
-        }
-        #endif
-
         return EXIT_SUCCESS;
 }
